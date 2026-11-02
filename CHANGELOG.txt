@@ -1,0 +1,11 @@
+Pint's Alts - Changelog
+
+v1.3
+- First public release.
+- Ledger tab: Roster, Bag Space, Skills, Activity and Miscellaneous views for every character, with totals.
+- Recipe books: click a profession on the Skills view to browse that character's recipes - skill-up colours,
+  slot / type filter, search, auction prices, cost to make with vendor prices and raw materials, chat links.
+- Characters tab: gear, stats, gear grid, bags, reputation, skills; try-on with stat changes; 3D model for the
+  character you're on, race portraits for the others.
+- Craft Upgrades tab (with the Craft Upgrades add-on): pick any character, or Craft for Alts.
+- Item search across every character's bags, bank, mail and gear.

@@ -1,0 +1,6 @@
+Pint's Alts - by Jake (Pint's Add-ons), built with Claude.
+
+Gear source data: generated from the CMaNGOS Classic world database - https://github.com/cmangos/classic-db (GPL).
+Vendor reagent prices: from the same database. Thank you to the CMaNGOS contributors.
+
+World of Warcraft names and game data are the property of Blizzard Entertainment.

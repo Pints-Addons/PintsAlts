@@ -1,0 +1,15 @@
+## Interface: 11508, 11509, 16001
+## Title: |cffd4a017Pint's|r Alts
+## Notes: Every character on your account at a glance - levels, gold, gear, bags, bank, professions and recipe books, without logging in. Craft Upgrades docks right in. /alts
+## Author: Jake (Pint's Add-ons, built with Claude)
+## Version: 1.3
+## X-Curse-Project-ID: 1779402
+## X-License: GPL-3.0
+## OptionalDeps: TacoTip, GearScoreLog, PintsCraftUpgrades, RecipeSources, PintsAuctions, Auctionator
+## SavedVariables: PintsLedgerDB
+
+GearData.lua
+Core.lua
+UI.lua
+Characters.lua
+TryOn.lua
