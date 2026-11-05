@@ -2,6 +2,10 @@
 -- after the swap. Candidates: your bags/bank, alts' bags/bank, what alts can craft, dungeon and raid drops, world drops,
 -- quest rewards and recipes nobody has learned yet (static data in GearData.lua).
 local ADDON, NS = ...
+-- Compatibility: WoW Forever runs on the modern game client, where these older functions moved or were renamed.
+local GetItemInfo = GetItemInfo or (C_Item and C_Item.GetItemInfo)
+local GetItemStats = GetItemStats or (C_Item and C_Item.GetItemStats)
+
 local L = NS.L
 local T = {}
 NS.Try = T

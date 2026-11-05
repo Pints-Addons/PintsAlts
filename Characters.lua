@@ -1,5 +1,9 @@
 -- Pints Ledger: Characters tab - pick an alt, see its gear (paper-doll layout), reputation and skills.
 local ADDON, NS = ...
+-- Compatibility: WoW Forever runs on the modern game client, where these older functions moved or were renamed.
+local GetItemInfo = GetItemInfo or (C_Item and C_Item.GetItemInfo)
+local GetItemIcon = GetItemIcon or (C_Item and C_Item.GetItemIconByID)
+
 local L = NS.L
 local floor = math.floor
 

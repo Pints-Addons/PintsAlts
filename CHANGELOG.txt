@@ -1,5 +1,10 @@
 Pint's Alts - Changelog
 
+v1.4
+- Works on WoW Forever (the modern game client). Classic Era is unchanged.
+- Professions and skills are read from the modern profession list.
+- Recipe books refresh when a profession window opens; game events a client doesn't have are skipped instead of erroring.
+
 v1.3
 - First public release.
 - Ledger tab: Roster, Bag Space, Skills, Activity and Miscellaneous views for every character, with totals.

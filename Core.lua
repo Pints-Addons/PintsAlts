@@ -1,6 +1,29 @@
 -- Pints Ledger: account-wide character ledger (data collection).
 -- Every character you log into records its own snapshot; the window shows all of them.
 local ADDON, NS = ...
+-- Compatibility: WoW Forever runs on the modern game client, where these older functions moved or were renamed.
+local GetItemInfo = GetItemInfo or (C_Item and C_Item.GetItemInfo)
+local GetDetailedItemLevelInfo = GetDetailedItemLevelInfo or (C_Item and C_Item.GetDetailedItemLevelInfo)
+local GetNumSkillLines, GetSkillLineInfo = GetNumSkillLines, GetSkillLineInfo
+if not GetNumSkillLines and GetProfessions then
+	local lines = {}
+	GetNumSkillLines = function()
+		wipe(lines)
+		local p = { GetProfessions() }
+		for k = 1, 6 do
+			if p[k] then
+				local name, _, rank, maxRank = GetProfessionInfo(p[k])
+				if name then lines[#lines + 1] = { name, rank, maxRank } end
+			end
+		end
+		return #lines
+	end
+	GetSkillLineInfo = function(i)
+		local l = lines[i]
+		if l then return l[1], false, false, l[2], 0, 0, l[3] end
+	end
+end
+
 local L = {}
 _G.PintsLedger = L
 NS.L = L
@@ -467,8 +490,8 @@ ev:SetScript("OnEvent", function(_, event, arg1, arg2)
       "PLAYER_GUILD_UPDATE", "HEARTHSTONE_BOUND", "SKILL_LINES_CHANGED", "CHARACTER_POINTS_CHANGED", "PLAYER_EQUIPMENT_CHANGED",
       "BAG_UPDATE_DELAYED", "BANKFRAME_OPENED", "PLAYERBANKSLOTS_CHANGED", "PLAYERBANKBAGSLOTS_CHANGED", "MAIL_INBOX_UPDATE",
       "AUCTION_OWNED_LIST_UPDATE", "AUCTION_BIDDER_LIST_UPDATE", "AUCTION_HOUSE_SHOW", "TRADE_SKILL_SHOW", "TRADE_SKILL_UPDATE", "CRAFT_SHOW", "CRAFT_UPDATE",
-      "TIME_PLAYED_MSG", "PLAYER_LOGOUT", "ZONE_CHANGED_NEW_AREA", "UPDATE_FACTION", "UNIT_INVENTORY_CHANGED" }) do
-      ev:RegisterEvent(e)
+      "TIME_PLAYED_MSG", "PLAYER_LOGOUT", "ZONE_CHANGED_NEW_AREA", "UPDATE_FACTION", "UNIT_INVENTORY_CHANGED", "TRADE_SKILL_LIST_UPDATE" }) do
+      pcall(ev.RegisterEvent, ev, e)   -- events this game version lacks are skipped
     end
     if GetNumGuildBankTabs then
       for _, e in ipairs({ "GUILDBANKFRAME_OPENED", "GUILDBANKBAGSLOTS_CHANGED", "PLAYER_INTERACTION_MANAGER_FRAME_SHOW" }) do pcall(ev.RegisterEvent, ev, e) end
@@ -511,7 +534,7 @@ ev:SetScript("OnEvent", function(_, event, arg1, arg2)
     Soon("mail", ScanMail)
   elseif event == "AUCTION_HOUSE_SHOW" or event == "AUCTION_OWNED_LIST_UPDATE" or event == "AUCTION_BIDDER_LIST_UPDATE" then
     Soon("ah", ScanAuctions, 1)
-  elseif event == "TRADE_SKILL_SHOW" or event == "TRADE_SKILL_UPDATE" then
+  elseif event == "TRADE_SKILL_SHOW" or event == "TRADE_SKILL_UPDATE" or event == "TRADE_SKILL_LIST_UPDATE" then
     Soon("trade", ScanTradeSkill, 0.5)
   elseif event == "CRAFT_SHOW" or event == "CRAFT_UPDATE" then
     Soon("craft", ScanCraft, 0.5)

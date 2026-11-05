@@ -1,5 +1,10 @@
 -- Pints Ledger: window, views, bottom tabs, minimap button.
 local ADDON, NS = ...
+-- Compatibility: WoW Forever runs on the modern game client, where these older functions moved or were renamed.
+local GetItemInfo = GetItemInfo or (C_Item and C_Item.GetItemInfo)
+local GetItemInfoInstant = GetItemInfoInstant or (C_Item and C_Item.GetItemInfoInstant)
+local GetItemQualityColor = GetItemQualityColor or (C_Item and C_Item.GetItemQualityColor)
+
 local L = NS.L
 local floor = math.floor
 

@@ -52,3 +52,7 @@ CRAFT UPGRADES TAB (needs Pint's Craft Upgrades)
 LICENSE
   GPL-3.0 (see LICENSE.txt). Dungeon, raid, quest and world-drop gear data is generated from
   the CMaNGOS Classic world database (https://github.com/cmangos/classic-db, GPL).
+
+FEEDBACK
+  Report a bug or suggest an idea: https://github.com/Pints-Addons/PintsAlts/issues
+  Source code: https://github.com/Pints-Addons/PintsAlts
