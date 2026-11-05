@@ -476,9 +476,16 @@ ev:SetScript("OnEvent", function(_, event, arg1, arg2)
     PintsLedgerDB.names = PintsLedgerDB.names or {}
     PintsLedgerDB.guilds = PintsLedgerDB.guilds or {}
   elseif event == "PLAYER_LOGIN" then
-    realm, name = GetRealmName(), UnitName("player")
+    realm, name = GetRealmName(), (GetUnitName and GetUnitName("player", false) or UnitName("player"))
     me = realm .. "." .. name
     PintsLedgerDB.chars[realm] = PintsLedgerDB.chars[realm] or {}
+    -- WoW Forever names have a second name ("Pint Waterboy"). Characters saved before that was known went in under the
+    -- first name alone, so every "Pint" shared one record: clear those once; each character saves itself again in full
+    if name:find(" ") and not (PintsLedgerDB.fullNames and PintsLedgerDB.fullNames[realm]) then
+      PintsLedgerDB.fullNames = PintsLedgerDB.fullNames or {}
+      PintsLedgerDB.fullNames[realm] = true
+      for n in pairs(PintsLedgerDB.chars[realm]) do if not n:find(" ") then PintsLedgerDB.chars[realm][n] = nil end end
+    end
     PintsLedgerDB.chars[realm][name] = PintsLedgerDB.chars[realm][name] or {}
     rec = PintsLedgerDB.chars[realm][name]
     rec.name, rec.realm = name, realm

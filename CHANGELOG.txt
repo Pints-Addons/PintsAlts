@@ -1,5 +1,10 @@
 Pint's Alts - Changelog
 
+v1.4.1
+- WoW Forever: characters are known by their full name (first and second, e.g. "Pint Waterboy"), so characters that
+  share a first name no longer share one record. Classic Era is unchanged.
+- Forever characters saved under a first name alone are cleared once; each saves itself again at its next login.
+
 v1.4
 - Works on WoW Forever (the modern game client). Classic Era is unchanged.
 - Professions and skills are read from the modern profession list.

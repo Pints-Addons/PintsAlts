@@ -697,7 +697,7 @@ function NS.RefreshUpgradeList()
     if (a.rec.level or 0) ~= (b.rec.level or 0) then return (a.rec.level or 0) > (b.rec.level or 0) end
     return a.name < b.name
   end)
-  local who, alts = UnitName("player"), false
+  local who, alts = (GetUnitName and GetUnitName("player", false) or UnitName("player")), false
   if CraftUpgradesAPI and CraftUpgradesAPI.GetTarget then who, alts = CraftUpgradesAPI.GetTarget() end
   for i, ch in ipairs(chars) do
     local b = upList[i]
