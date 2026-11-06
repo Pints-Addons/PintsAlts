@@ -155,7 +155,33 @@ views.misc = { label = "Miscellaneous", cols = {
     end, sort = function(c) return c.class or "" end },
   { "Last Zone", 120, "CENTER", text = function(c) return c.zone or "?" end, sort = function(c) return c.zone or "" end },
 } }
+-- WoW Forever currencies: Merchant's Favor and Honor Points first, then any others your characters have
+local CUR_FIRST = { "Merchant's Favor", "Honor Points" }
+local function CurCol(n)
+  local short = (n == "Merchant's Favor") and "Merchant's Favor" or n
+  return { short, math.max(110, #short * 7 + 30), "RIGHT",
+    text = function(c)
+      local v = c.cur and c.cur[n]
+      if not v then return "|cff808080-|r" end
+      local k = PintsLedgerDB.currencies and PintsLedgerDB.currencies[n]
+      return (v > 0 and "|cffffffff" or "|cff808080") .. v .. "|r" .. (k and k.icon and (" |T" .. k.icon .. ":14:14:0:0|t") or "")
+    end,
+    sort = function(c) return c.cur and c.cur[n] or -1 end,
+    total = function(list) local s = 0; for _, c in ipairs(list) do s = s + (c.cur and c.cur[n] or 0) end; return s end }
+end
+function L.CurrencyColumns()
+  local cols, seen = { NAME, LEVEL }, {}
+  local function add(n) if not seen[n] and #cols < 8 then seen[n] = true; cols[#cols + 1] = CurCol(n) end end
+  for _, n in ipairs(CUR_FIRST) do add(n) end
+  local others = {}
+  for n in pairs(PintsLedgerDB.currencies or {}) do if not seen[n] then others[#others + 1] = n end end
+  table.sort(others)
+  for _, n in ipairs(others) do add(n) end
+  return cols
+end
+views.currency = { label = "Currencies", cols = { NAME, LEVEL } }
 viewOrder = { "roster", "bags", "skills", "activity", "misc" }
+if C_CurrencyInfo and C_CurrencyInfo.GetCurrencyListSize then table.insert(viewOrder, "currency") end
 
 ---------------------------------------------------------------- rendering
 local headerBtns, Refresh = {}, nil
@@ -242,6 +268,7 @@ StaticPopupDialogs.PINTSLEDGER_FORGET = {
 function Refresh()
   if not (win and win:IsShown() and currentTab == "ledger") then return end
   local view = views[currentView]
+  if currentView == "currency" then view.cols = L.CurrencyColumns() end
   -- header buttons
   local x = 28
   for j, col in ipairs(view.cols) do

@@ -1,5 +1,14 @@
 Pint's Alts - Changelog
 
+v1.5
+- WoW Forever: new Currencies view - every character's Merchant's Favor and Honor Points (and any other currency
+  they have), with totals. Amounts save as they change, even with the Currency tab's groups folded.
+- Skills: when a profession can go up a rank (or is capped), the next rank and where to learn it show under it -
+  the trainer, or the book or quest for Fishing, Cooking and First Aid, with map coordinates and the book's price.
+  Click it to point Pint's Quest Book's arrow there. A chat note tells you once when one is ready.
+- WoW Forever: each character's talent spec is read again (the tree Pint's Tips shows), so Craft Upgrades scores
+  their gear for the right role.
+
 v1.4.2
 - WoW Forever: money shows with the gold, silver and copper icons (the game's own coin text showed bare digits).
 

@@ -67,17 +67,51 @@ local function ScanBasics()
   rec.hardcore = C_GameRules and C_GameRules.IsHardcoreActive and C_GameRules.IsHardcoreActive() or nil
 end
 
-local function ScanTalents()
-  if not GetNumTalentTabs then return end
-  local best, bestPts = nil, 0
-  for i = 1, (GetNumTalentTabs() or 0) do
-    local a, b, c, d, e = GetTalentTabInfo(i)
-    local tabName, pts
-    if type(a) == "number" then tabName, pts = b, e else tabName, pts = a, c end   -- old vs new return order
-    if type(pts) == "number" and pts > bestPts then best, bestPts, rec.specIndex = tabName, pts, i end
+-- WoW Forever currencies (Merchant's Favor, Honor Points...): rec.cur[name] = amount. Their ids and icons are kept
+-- account-wide in PintsLedgerDB.currencies, so an amount still reads when its group is folded in the Currency tab.
+local function ScanCurrencies()
+  local C = C_CurrencyInfo
+  if not (C and C.GetCurrencyInfo and C.GetCurrencyListSize) then return end
+  local known = PintsLedgerDB.currencies
+  for i = 1, (C.GetCurrencyListSize() or 0) do
+    local info = C.GetCurrencyListInfo(i)
+    if info and not info.isHeader and info.name then
+      local link = C.GetCurrencyListLink and C.GetCurrencyListLink(i)
+      local id = link and tonumber(link:match("currency:(%d+)"))
+      if id then known[info.name] = { id = id, icon = info.iconFileID } end
+    end
   end
-  if not best then rec.specIndex = 0 end
+  rec.cur = rec.cur or {}
+  for n, k in pairs(known) do
+    local info = C.GetCurrencyInfo(k.id)
+    if info and info.quantity then rec.cur[n] = info.quantity; k.icon = k.icon or info.iconFileID end
+  end
+end
+L.ScanCurrencies = ScanCurrencies
+
+local function ScanTalents()
+  -- the talent tree with the most points (trees 1-3, read the way Pint's Tips does: WoW Forever has no GetNumTalentTabs)
+  local best, bestPts = nil, 0
+  rec.specIndex = 0
+  for i = 1, math.max(3, (GetNumTalentTabs and GetNumTalentTabs()) or 0) do
+    local ok, a, b, c, d, e = pcall(GetTalentTabInfo, i)
+    if ok and a then
+      local tabName, pts
+      if type(a) == "number" then tabName, pts = b, e else tabName, pts = a, c end   -- old vs new return order
+      if type(pts) == "number" and pts > bestPts then best, bestPts, rec.specIndex = tabName, pts, i end
+    end
+  end
   rec.spec = best
+  -- no talent points to go on: the specialization the game says you chose, if it has one
+  if not best then
+    local get = (C_SpecializationInfo and C_SpecializationInfo.GetSpecialization) or GetSpecialization
+    local ok, i = pcall(function() return get and get() end)
+    if ok and type(i) == "number" and i > 0 and i <= 3 then
+      rec.specIndex = i
+      local info = GetSpecializationInfo and { pcall(GetSpecializationInfo, i) }
+      if info and info[1] and type(info[3]) == "string" then rec.spec = info[3] end
+    end
+  end
 end
 
 local SLOTS = { 1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18 }
@@ -117,6 +151,111 @@ local function ScanGear()
   end
 end
 
+---------------------------------------------------------------- the next profession rank
+-- Classic ranks: Apprentice 75, Journeyman 150, Expert 225, Artisan 300. The next rank can be learned once the skill
+-- reaches the "skill" figure (and the character the "level"). Where: [faction] or a text for both.
+local RANKS = {
+  [75]  = { name = "Journeyman", cap = 150, skill = 50,  level = 10 },
+  [150] = { name = "Expert",     cap = 225, skill = 125, level = 20 },
+  [225] = { name = "Artisan",    cap = 300, skill = 200, level = 35 },
+}
+local CAPITAL = "any %s trainer in a capital city"
+-- who and where: what (book/quest), who, town, cost (copper), and a position - world (cont, wx, wy, from the Classic
+-- world database) or a zone map position (map = uiMapID, x, y) - turned into map coordinates by Pint's Quest Book
+local G = 10000
+local WHERE = {
+  -- secondary skills: Expert from a book, Artisan from a quest
+  Fishing = {
+    Expert = { what = "Book \"Expert Fishing - The Bass and You\"", who = "Old Man Heming", town = "Booty Bay", cost = G,
+               map = 1434, x = 27.4, y = 77.2, approx = true },
+    Artisan = { what = "Quest \"Nat Pagle, Angler Extreme\"", who = "Nat Pagle", town = "Tidefury Cove, Dustwallow Marsh",
+                cont = 1, wx = -4135.3, wy = -4052.0, note = "level 35" } },
+  Cooking = {
+    Expert = { Horde = { what = "\"Expert Cookbook\"", who = "Wulan", town = "Shadowprey Village, Desolace", cost = G, cont = 1, wx = -1635.9, wy = 3056.9 },
+               Alliance = { what = "\"Expert Cookbook\"", who = "Shandrina", town = "Ashenvale", cost = G, cont = 1, wx = 2094.2, wy = -1153.4 } },
+    Artisan = { what = "Quest \"Clamlette Surprise\"", who = "Dirge Quikcleave", town = "Gadgetzan", cont = 1, wx = -7168.3, wy = -3850.3,
+                note = "level 35; 12 Giant Egg, 10 Zesty Clam Meat, 20 Alterac Swiss" } },
+  ["First Aid"] = {
+    Expert = { Horde = { what = "Book \"Expert First Aid - Under Wraps\"", who = "Balai Lok'Wein", town = "Brackenwall Village", cost = G, cont = 1, wx = -3095.8, wy = -2890.5 },
+               Alliance = { what = "Book \"Expert First Aid - Under Wraps\"", who = "Deneb Walker", town = "Stromgarde Keep", cost = G, cont = 0, wx = -1545.4, wy = -1837.4 } },
+    Artisan = { Horde = { what = "Quest \"Triage\"", who = "Doctor Gregory Victor", town = "Hammerfall", cont = 0, wx = -1018.8, wy = -3509.5, note = "level 35" },
+                Alliance = { what = "Quest \"Triage\"", who = "Doctor Gustaf VanHowzen", town = "Theramore", cont = 1, wx = -3747.3, wy = -4532.2, note = "level 35" } } },
+  -- primary professions: Journeyman and Expert from city trainers; Artisan from a few masters
+  Alchemy = { Artisan = { Horde = { who = "Rogvar", town = "Stonard", cont = 0, wx = -10474.8, wy = -3336.0 },
+                          Alliance = { who = "Ghak Healtouch", town = "Thelsamar", cont = 0, wx = -5395.9, wy = -3016.2 } } },
+  Blacksmithing = { Artisan = { who = "Brikk Keencraft", town = "Booty Bay", cont = 0, wx = -14383.0, wy = 370.8 } },
+  Enchanting = { Artisan = { who = "Annora", town = "inside Uldaman, Badlands" } },
+  Engineering = { Artisan = { who = "Buzzek Bracketswing", town = "Gadgetzan", cont = 1, wx = -7150.3, wy = -3830.2 } },
+  Leatherworking = { Artisan = { Horde = { who = "Hahrana Ironhide", town = "Camp Mojache", cont = 1, wx = -4364.5, wy = 273.5 },
+                                 Alliance = { who = "Drakk Stonehand", town = "Aerie Peak", cont = 0, wx = 350.4, wy = -2090.4 } } },
+  Tailoring = { Artisan = { Horde = { who = "Daryl Stack", town = "Tarren Mill", cont = 0, wx = -43.4, wy = -973.3 },
+                            Alliance = { who = "Timothy Worthington", town = "Theramore", cont = 1, wx = -3846.7, wy = -4449.2 } } },
+  Mining = { Artisan = { who = "Pikkle", town = "Tanaris", cont = 1, wx = -7167.7, wy = -3743.1 } },
+}
+-- a place's world position (asks Pint's Quest Book to turn a zone map position into one)
+local function PlaceWorld(pl)
+  if pl.cont then return pl.cont, pl.wx, pl.wy end
+  local QB = _G.PintsQuestBook
+  if pl.map and QB and QB.MapToWorld then return QB.MapToWorld(pl.map, pl.x, pl.y) end
+end
+-- "Old Man Heming, Booty Bay (Stranglethorn Vale 27.4, 77.2)  1g"
+function L.PlaceText(pl, short)
+  if type(pl) == "string" then return pl end
+  local zone, x, y
+  local QB = _G.PintsQuestBook
+  if pl.cont and QB and QB.Locate then
+    local ok, zn, _, mx, my = pcall(QB.Locate, pl.cont, pl.wx, pl.wy)
+    if ok and zn then zone, x, y = zn, mx, my end
+  elseif pl.map then
+    local info = C_Map and C_Map.GetMapInfo and C_Map.GetMapInfo(pl.map)
+    zone, x, y = info and info.name, pl.x, pl.y
+  end
+  local t = ((not short and pl.what) and (pl.what .. " - ") or "") .. pl.who .. ", " .. pl.town
+  if zone and x then t = t .. ("  |cffffffff(%s %.1f, %.1f%s)|r"):format(zone, x, y, (pl.approx and not short) and " approx." or "")
+  elseif zone then t = t .. "  |cffffffff(" .. zone .. ")|r" end
+  if pl.cost then t = t .. "  " .. ((NS.Money and NS.Money(pl.cost)) or (math.floor(pl.cost / G) .. "g")) end
+  if pl.note and not short then t = t .. "  |cffaaaaaa(" .. pl.note .. ")|r" end
+  return t
+end
+-- point Pint's Quest Book's arrow at a place (true when it could)
+function L.PlaceArrow(pl)
+  if type(pl) ~= "table" then return false end
+  local QB = _G.PintsQuestBook
+  local c, x, y = PlaceWorld(pl)
+  if c and QB and QB.ArrowTo then QB.ArrowTo(c, x, y, pl.who, pl.what or pl.town); return true end
+  return false
+end
+local SECONDARY_SKILL = { Fishing = true, Cooking = true, ["First Aid"] = true }
+-- for a profession at rank/max: { rank = "Expert", cap = 225, where = "...", ready = bool, need = "..." } or nil
+function L.ProfNext(prof, rank, max, level, faction)
+  local r = RANKS[max or 0]
+  if not r or not L.PROF_ICON[prof] then return nil end
+  local need = (SECONDARY_SKILL[prof] and r.name == "Artisan") and 225 or r.skill
+  local w = WHERE[prof] and WHERE[prof][r.name]
+  if type(w) == "table" and not w.who then w = w[faction or ""] or w.Horde or w.Alliance end
+  w = w or CAPITAL:format(prof)
+  local lvlOK = SECONDARY_SKILL[prof] or (level or 0) >= r.level
+  local ready = (rank or 0) >= need and lvlOK
+  local why = (rank or 0) < need and ("at skill " .. need) or (not lvlOK and ("at level " .. r.level)) or nil
+  return { rank = r.name, cap = r.cap, where = w, ready = ready, need = why }
+end
+
+-- tell you once (per character and rank) when a profession can go up a rank
+local function NextRankNotice()
+  rec.rankNoticed = rec.rankNoticed or {}
+  local list = {}
+  for _, p in ipairs(rec.profs or {}) do list[#list + 1] = p end
+  for _, p in pairs(rec.secondary or {}) do list[#list + 1] = p end
+  for _, p in ipairs(list) do
+    local nx = L.ProfNext(p.name, p.rank, p.max, rec.level, rec.faction)
+    local key = p.name .. ":" .. (p.max or 0)
+    if nx and nx.ready and not rec.rankNoticed[key] then
+      rec.rankNoticed[key] = true
+      print(("|cffd4a017Pint's Alts|r: %s can go up to |cffffd100%s %s|r (%d) - %s."):format(p.name, nx.rank, p.name, nx.cap, L.PlaceText(nx.where)))
+    end
+  end
+end
+
 local function ScanSkills()
   local profs, sec, all = {}, {}, {}
   for i = 1, (GetNumSkillLines() or 0) do
@@ -128,6 +267,7 @@ local function ScanSkills()
     end
   end
   rec.profs, rec.secondary, rec.skillList = profs, sec, all
+  pcall(NextRankNotice)
 end
 
 -- remember item names so search works without the game's item cache
@@ -475,6 +615,7 @@ ev:SetScript("OnEvent", function(_, event, arg1, arg2)
     PintsLedgerDB.minimap = PintsLedgerDB.minimap or { hide = false }
     PintsLedgerDB.names = PintsLedgerDB.names or {}
     PintsLedgerDB.guilds = PintsLedgerDB.guilds or {}
+    PintsLedgerDB.currencies = PintsLedgerDB.currencies or {}
   elseif event == "PLAYER_LOGIN" then
     realm, name = GetRealmName(), (GetUnitName and GetUnitName("player", false) or UnitName("player"))
     me = realm .. "." .. name
@@ -489,7 +630,7 @@ ev:SetScript("OnEvent", function(_, event, arg1, arg2)
     PintsLedgerDB.chars[realm][name] = PintsLedgerDB.chars[realm][name] or {}
     rec = PintsLedgerDB.chars[realm][name]
     rec.name, rec.realm = name, realm
-    pcall(ScanBasics); pcall(ScanTalents); pcall(ScanSkills); pcall(ScanBags); pcall(ScanReps)
+    pcall(ScanBasics); pcall(ScanTalents); pcall(ScanSkills); pcall(ScanBags); pcall(ScanReps); pcall(ScanCurrencies)
     C_Timer.After(3, function() pcall(ScanGear); pcall(ScanBasics) end)
     -- Altoholic/DataStore already asks for /played at login; only ask ourselves if nobody does
     C_Timer.After(12, function() if not rec.playedAt or now() - rec.playedAt > 60 then playedAsked = true; RequestTimePlayed() end end)
@@ -497,7 +638,8 @@ ev:SetScript("OnEvent", function(_, event, arg1, arg2)
       "PLAYER_GUILD_UPDATE", "HEARTHSTONE_BOUND", "SKILL_LINES_CHANGED", "CHARACTER_POINTS_CHANGED", "PLAYER_EQUIPMENT_CHANGED",
       "BAG_UPDATE_DELAYED", "BANKFRAME_OPENED", "PLAYERBANKSLOTS_CHANGED", "PLAYERBANKBAGSLOTS_CHANGED", "MAIL_INBOX_UPDATE",
       "AUCTION_OWNED_LIST_UPDATE", "AUCTION_BIDDER_LIST_UPDATE", "AUCTION_HOUSE_SHOW", "TRADE_SKILL_SHOW", "TRADE_SKILL_UPDATE", "CRAFT_SHOW", "CRAFT_UPDATE",
-      "TIME_PLAYED_MSG", "PLAYER_LOGOUT", "ZONE_CHANGED_NEW_AREA", "UPDATE_FACTION", "UNIT_INVENTORY_CHANGED", "TRADE_SKILL_LIST_UPDATE" }) do
+      "TIME_PLAYED_MSG", "PLAYER_LOGOUT", "ZONE_CHANGED_NEW_AREA", "UPDATE_FACTION", "UNIT_INVENTORY_CHANGED", "TRADE_SKILL_LIST_UPDATE", "CURRENCY_DISPLAY_UPDATE",
+      "PLAYER_SPECIALIZATION_CHANGED", "ACTIVE_TALENT_GROUP_CHANGED" }) do
       pcall(ev.RegisterEvent, ev, e)   -- events this game version lacks are skipped
     end
     if GetNumGuildBankTabs then
@@ -519,13 +661,15 @@ ev:SetScript("OnEvent", function(_, event, arg1, arg2)
       for t = 1, (GetNumGuildBankTabs() or 0) do pcall(QueryGuildBankTab, t) end
     end
     Soon("gbank", ScanGuildBank, 1)
+  elseif event == "CURRENCY_DISPLAY_UPDATE" then
+    Soon("cur", ScanCurrencies, 1)
   elseif event == "UPDATE_FACTION" then
     Soon("reps", ScanReps, 1)
   elseif event == "UNIT_INVENTORY_CHANGED" then
     if arg1 == "player" then Soon("gear", ScanGear, 1.5) end
   elseif event == "SKILL_LINES_CHANGED" then
     Soon("skills", ScanSkills)
-  elseif event == "CHARACTER_POINTS_CHANGED" then
+  elseif event == "CHARACTER_POINTS_CHANGED" or event == "PLAYER_SPECIALIZATION_CHANGED" or event == "ACTIVE_TALENT_GROUP_CHANGED" then
     Soon("talents", ScanTalents)
   elseif event == "PLAYER_EQUIPMENT_CHANGED" then
     Soon("gear", ScanGear, 1.5)

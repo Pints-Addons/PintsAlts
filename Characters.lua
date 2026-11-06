@@ -669,7 +669,10 @@ local function FillSkills(c)
   f.none:SetShown(#sk == 0)
   local i, y = 0, 0
   local function place(row, gap) y = y + (gap or 0); row:ClearAllPoints(); row:SetPoint("TOPLEFT", 0, -y); row:Show(); y = y + 22 end
-  local function plain(row) row.bar:Hide(); row.note:Hide(); row.cost:Hide() end
+  local function plain(row)
+    row.bar:Hide(); row.note:Hide(); row.cost:Hide(); row.place = nil
+    row.note:ClearAllPoints(); row.note:SetPoint("LEFT", 330, 0); row.note:SetWidth(370)
+  end
 
   local known = {}
   for _, s in ipairs(sk) do if s[2] ~= 1 then known[s[1]] = true end end
@@ -722,6 +725,31 @@ local function FillSkills(c)
         row.bar:Show()
       end
       place(row)
+      -- a profession ready for its next rank (or capped): where to learn it
+      local nx = L.ProfNext and L.ProfNext(sname, rank, max, c.level, c.faction)
+      if nx and (nx.ready or rank >= max) then
+        i = i + 1
+        local hint = SkillRow(i, f); plain(hint)
+        hint.name:SetFontObject("GameFontHighlightSmall")
+        hint.name:SetText(nx.ready and ("      |cff40ff40Learn " .. nx.rank .. " (" .. nx.cap .. ")|r") or ("      |cffff8040" .. nx.rank .. " " .. (nx.need or "") .. "|r"))
+        hint.note:ClearAllPoints(); hint.note:SetPoint("LEFT", 250, 0)
+        hint.note:SetWidth(450); hint.note:SetText("|cffffd100" .. ((type(nx.where) == "table" and nx.where.what) and (nx.where.what:gsub("^Book ", "") .. ": ") or "") .. L.PlaceText(nx.where, true) .. "|r"); hint.note:Show()
+        -- click: Pint's Quest Book's arrow points the way
+        hint.place = nx.where
+        if not hint.pbHooked then
+          hint.pbHooked = true
+          hint:EnableMouse(true)
+          hint:SetScript("OnMouseUp", function(self) if self.place and L.PlaceArrow(self.place) then print("|cffd4a017Pint's Alts|r: arrow set.") end end)
+          hint:SetScript("OnEnter", function(self)
+            if type(self.place) ~= "table" then return end
+            GameTooltip:SetOwner(self, "ANCHOR_CURSOR"); GameTooltip:AddLine(self.place.who, 1, 0.82, 0)
+            GameTooltip:AddLine(L.PlaceText(self.place), 1, 1, 1, true)
+            GameTooltip:AddLine("Click: point the Quest Book arrow there", 0.6, 0.8, 1); GameTooltip:Show()
+          end)
+          hint:SetScript("OnLeave", function() GameTooltip:Hide() end)
+        end
+        place(hint, -4)
+      end
     end
   end
   addMissing()                                      -- no Weapon Skills header (or it was last)
