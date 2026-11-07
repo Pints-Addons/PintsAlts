@@ -19,6 +19,42 @@ local SLOTS = {
 local CLS = { DRUID = "druid", HUNTER = "hunter", MAGE = "mage", PALADIN = "paladin", PRIEST = "priest", ROGUE = "rogue",
   SHAMAN = "shaman", WARLOCK = "warlock", WARRIOR = "warrior" }
 local ROW_H, HEAD_H = 30, 20
+-- dungeons and raids, roughly in level order (the filter lists the ones in the list you're looking at, in this order).
+-- Wings share their dungeon: "Scarlet Monastery: Library" is under Scarlet Monastery.
+local DUNGEONS = { "Ragefire Chasm", "Wailing Caverns", "The Deadmines", "Shadowfang Keep", "Blackfathom Deeps", "The Stockade",
+  "Gnomeregan", "Razorfen Kraul", "Scarlet Monastery", "Razorfen Downs", "Uldaman", "Zul'Farrak", "Maraudon", "Sunken Temple",
+  "Blackrock Depths", "Blackrock Spire", "Dire Maul", "Scholomance", "Stratholme",
+  -- WoW Forever's own dungeons
+  "Excavation Site: Wetlands", "Ruins of Lordaeron", "Hall of Thanes", "City of Dalaran", "The Drowned City",
+  -- raids
+  "Zul'Gurub", "Molten Core", "Onyxia's Lair", "Blackwing Lair", "Ruins of Ahn'Qiraj", "Temple of Ahn'Qiraj", "Naxxramas" }
+local DORDER = {}
+for i, d in ipairs(DUNGEONS) do DORDER[d] = i end
+local SPECIAL = { ["Arugal's Voidwalker"] = { "Shadowfang Keep" } }
+-- the dungeon(s) a drop comes from: "Rhahk'Zor - The Deadmines" -> The Deadmines; quests, zones and crafting -> none
+local dunCache = {}
+local function DungeonsOf(src)
+  if not src or src == "" then return {} end
+  local hit = dunCache[src]
+  if hit then return hit end
+  hit = SPECIAL[src]
+  if not hit then
+    hit = {}
+    local where = src:match(".* %- (.+)$") or src
+    where = where:gsub("%s*%b()$", "")
+    for part in where:gmatch("[^/]+") do
+      part = part:gsub("^%s+", ""):gsub("%s+$", "")
+      local d = DORDER[part] and part or part:match("^(.-):") 
+      if d and DORDER[d] then hit[#hit + 1] = d end
+    end
+  end
+  dunCache[src] = hit
+  return hit
+end
+local function FromDungeon(src, d)
+  for _, x in ipairs(DungeonsOf(src)) do if x == d then return true end end
+  return false
+end
 
 function B.Available()
   return PintsBisData and PintsBisData.specs and (select(4, GetBuildInfo()) or 0) >= 16000 and true or false
@@ -114,6 +150,7 @@ end
 local pane, rows = nil, {}
 local view = {}            -- [charKey] = bracket shown (nil = by level)
 local atLevel = {}         -- [charKey] = level typed in the level box (nil = the character's own)
+local dungeon = nil        -- the dungeon filter (nil = every source)
 
 local function Menu(owner, items, onPick)
   local m = B.menu
@@ -160,7 +197,8 @@ local function Row(i)
   r:RegisterForClicks("LeftButtonUp", "RightButtonUp")
   r.bg = r:CreateTexture(nil, "BACKGROUND"); r.bg:SetAllPoints()
   r:SetHighlightTexture("Interface\\Buttons\\UI-Listbox-Highlight2", "ADD")
-  r.star = CreateFrame("Button", nil, r); r.star:SetSize(16, 16); r.star:SetPoint("LEFT", 4, 0)
+  r.rank = r:CreateFontString(nil, "OVERLAY", "GameFontNormal"); r.rank:SetPoint("LEFT", 0, 0); r.rank:SetWidth(22); r.rank:SetJustifyH("RIGHT")
+  r.star = CreateFrame("Button", nil, r); r.star:SetSize(16, 16); r.star:SetPoint("LEFT", 26, 0)
   r.star.tex = r.star:CreateTexture(nil, "OVERLAY"); r.star.tex:SetAllPoints()
   r.star.tex:SetTexture("Interface\\COMMON\\ReputationStar"); r.star.tex:SetTexCoord(0, 0.5, 0, 0.5)
   r.star:SetScript("OnClick", function(self)
@@ -171,11 +209,11 @@ local function Row(i)
     GameTooltip:SetOwner(self, "ANCHOR_LEFT"); GameTooltip:AddLine("Wishlist (shared with Pint's Loot)"); GameTooltip:Show()
   end)
   r.star:SetScript("OnLeave", function() GameTooltip:Hide() end)
-  r.icon = r:CreateTexture(nil, "ARTWORK"); r.icon:SetSize(24, 24); r.icon:SetPoint("LEFT", 24, 0)
-  r.name = r:CreateFontString(nil, "OVERLAY", "GameFontHighlight"); r.name:SetPoint("TOPLEFT", 54, -2)
-  r.name:SetWidth(330); r.name:SetJustifyH("LEFT"); r.name:SetWordWrap(false)
-  r.src = r:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall"); r.src:SetPoint("BOTTOMLEFT", 54, 2)
-  r.src:SetWidth(390); r.src:SetJustifyH("LEFT"); r.src:SetWordWrap(false)
+  r.icon = r:CreateTexture(nil, "ARTWORK"); r.icon:SetSize(24, 24); r.icon:SetPoint("LEFT", 46, 0)
+  r.name = r:CreateFontString(nil, "OVERLAY", "GameFontHighlight"); r.name:SetPoint("TOPLEFT", 76, -2)
+  r.name:SetWidth(310); r.name:SetJustifyH("LEFT"); r.name:SetWordWrap(false)
+  r.src = r:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall"); r.src:SetPoint("BOTTOMLEFT", 76, 2)
+  r.src:SetWidth(360); r.src:SetJustifyH("LEFT"); r.src:SetWordWrap(false)
   r.have = r:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall"); r.have:SetPoint("RIGHT", -150, 0)
   r.have:SetWidth(170); r.have:SetJustifyH("RIGHT"); r.have:SetWordWrap(false)
   r.pct = r:CreateFontString(nil, "OVERLAY", "GameFontNormal"); r.pct:SetPoint("RIGHT", -60, 0); r.pct:SetWidth(80); r.pct:SetJustifyH("RIGHT")
@@ -246,6 +284,21 @@ function B.Build(parent)
     end)
     pane.brk[i] = t
   end
+  -- only what drops in one dungeon (the numbers keep each item's place in its slot's list)
+  pane.dun = CreateFrame("Button", nil, pane, "UIPanelButtonTemplate"); pane.dun:SetSize(150, 22)
+  pane.dun:SetPoint("LEFT", pane.brk[#BRACKETS], "RIGHT", 8, 0)
+  pane.dun:SetScript("OnClick", function(self)
+    local c = pane.c; if not c then return end
+    local counts = pane.dunCounts or {}
+    local items = { { text = "Every source", value = "", sel = dungeon == nil } }
+    local names = {}
+    for d in pairs(counts) do names[#names + 1] = d end
+    if dungeon and not counts[dungeon] then names[#names + 1] = dungeon end
+    table.sort(names, function(a, b) return (DORDER[a] or 99) < (DORDER[b] or 99) end)
+    for _, d in ipairs(names) do items[#items + 1] = { text = ("%s |cff909090(%d)|r"):format(d, counts[d] or 0), value = d, sel = d == dungeon } end
+    if #names == 0 then items[#items + 1] = { text = "|cff909090No dungeon drops in this list|r", value = "" } end
+    Menu(self, items, function(v) dungeon = (v ~= "" and v) or nil; B.Fill(c) end)
+  end)
   pane.note = pane:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall"); pane.note:SetPoint("TOPLEFT", 6, -32); pane.note:SetWidth(740)
   pane.note:SetJustifyH("LEFT")
   -- list
@@ -303,16 +356,30 @@ function B.Fill(c)
   local S = _G.CraftUpgradesScore
   local ctx = S and S.UpgradeVs and { role = S.RoleFor and S.RoleFor(c), class = c.classFile, gear = function(s) return c.gear and c.gear[s] end }
   local PL = _G.PintsLoot
+  -- the dungeon filter: count what each dungeon has in this list (for the menu), then keep only the picked one's
+  local counts = {}
+  for _, l in pairs(list) do
+    for _, pair in ipairs(l) do
+      local it = D.items[pair[1]]
+      for _, d in ipairs(DungeonsOf(it and it[1] and D.sources[it[1]])) do counts[d] = (counts[d] or 0) + 1 end
+    end
+  end
+  pane.dunCounts = counts
+  pane.dun:SetText(dungeon and ("|cff40ff40" .. dungeon .. "|r") or "Every source  |cffaaaaaav|r")
   local i, y = 0, 0
   for _, sd in ipairs(SLOTS) do
-    local ids = list[sd[1]]
-    if ids and #ids > 0 then
+    local ids = {}
+    for rank, pair in ipairs(list[sd[1]] or {}) do
+      local it = D.items[pair[1]]
+      if not dungeon or FromDungeon(it and it[1] and D.sources[it[1]], dungeon) then ids[#ids + 1] = { pair[1], pair[2], rank } end
+    end
+    if #ids > 0 then
       i = i + 1
       local h = Row(i)
       h.e = nil
       h:ClearAllPoints(); h:SetPoint("TOPLEFT", 0, -y); h:SetHeight(HEAD_H)
       h.bg:SetColorTexture(1, 0.82, 0, 0.10)
-      h.icon:Hide(); h.star:Hide(); h.src:SetText(""); h.pct:SetText(""); h.lvl:SetText("")
+      h.icon:Hide(); h.star:Hide(); h.rank:SetText(""); h.src:SetText(""); h.pct:SetText(""); h.lvl:SetText("")
       local worn = c.gear and c.gear[sd[2]]
       local wn = worn and GetItemInfo(worn)
       h.name:ClearAllPoints(); h.name:SetPoint("LEFT", 8, 0)
@@ -327,13 +394,14 @@ function B.Fill(c)
         local r = Row(i)
         local src = it[1] and D.sources[it[1]] or ""
         r.e = { id = id, slot = sd[2], src = src }
+        r.rank:SetText(pair[3] == 1 and ("|cffffd100" .. pair[3] .. ".|r") or ("|cffc0c0c0" .. pair[3] .. ".|r"))
         r:ClearAllPoints(); r:SetPoint("TOPLEFT", 0, -y); r:SetHeight(ROW_H - 2)
         r.bg:SetColorTexture(1, 1, 1, i % 2 == 0 and 0.04 or 0)
         local name, link, q, _, req = GetItemInfo(id)
         local icon = select(5, GetItemInfoInstant(id))
         if not name and C_Item and C_Item.RequestLoadItemDataByID then C_Item.RequestLoadItemDataByID(id) end
         r.icon:SetTexture(icon or "Interface\\Icons\\INV_Misc_QuestionMark"); r.icon:Show()
-        r.name:ClearAllPoints(); r.name:SetPoint("TOPLEFT", 54, -2)
+        r.name:ClearAllPoints(); r.name:SetPoint("TOPLEFT", 76, -2)
         local col = ITEM_QUALITY_COLORS and q and ITEM_QUALITY_COLORS[q]
         r.name:SetText(((col and col.hex) or "|cffffffff") .. (name or it[3] or ("item " .. id)) .. "|r")
         r.src:SetText("|cffd4a24c" .. (src ~= "" and src or "Source unknown") .. "|r" ..
@@ -358,5 +426,8 @@ function B.Fill(c)
   end
   for j = i + 1, #rows do rows[j]:Hide() end
   pane.content:SetHeight(math.max(1, y))
-  if i == 0 then pane.none:SetText("Nothing listed for this spec and level."); pane.none:Show() end
+  if i == 0 then
+    pane.none:SetText(dungeon and ("Nothing from " .. dungeon .. " in this list - pick Every source, or try another level or Whole list.") or "Nothing listed for this spec and level.")
+    pane.none:Show()
+  end
 end

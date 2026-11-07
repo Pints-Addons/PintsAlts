@@ -1,5 +1,10 @@
 Pint's Alts - Changelog
 
+v1.6.1
+- BiS tab: each slot's picks are numbered in order (1 = best).
+- BiS tab: a dungeon filter shows only what drops in one dungeon or raid (wings count as their dungeon), with how
+  many picks each has. The numbers keep each item's place in its slot.
+
 v1.6
 - New BiS tab (WoW Forever): best-in-slot gear for each character's spec and level bracket (20, 30, 40, 50, 60), from
   the WoW Forever BiS lists at wowtbc.gg. Each slot shows the picks with where they drop, the level needed, what you
