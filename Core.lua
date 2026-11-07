@@ -295,7 +295,8 @@ local function CountContainer(bag, into)
 end
 local function BagItemLink(bag)
   if bag == 0 or bag == (BANK_CONTAINER or -1) then return nil end
-  local inv = C_Container.ContainerIDToInventoryID and C_Container.ContainerIDToInventoryID(bag)
+  local ok, inv = pcall(function() return C_Container.ContainerIDToInventoryID and C_Container.ContainerIDToInventoryID(bag) end)
+  if not ok then return nil end
   return inv and GetInventoryItemLink("player", inv)
 end
 
@@ -316,11 +317,18 @@ local function ScanBank()
   local items = {}
   local bags = { BANK_CONTAINER or -1 }
   for b = (NUM_BAG_SLOTS or 4) + 1, (NUM_BAG_SLOTS or 4) + (NUM_BANKBAGSLOTS or 6) do bags[#bags + 1] = b end
+  -- WoW Forever: the bank is the tabs you bought at the banker (no old bank slots or bank bags)
+  local BI = Enum and Enum.BagIndex
+  if BI and BI.CharacterBankTab_1 then
+    bags = {}
+    for t = 1, 9 do local id = BI["CharacterBankTab_" .. t]; if id then bags[#bags + 1] = id end end
+  end
   rec.bankSlots = {}
   for i, bag in ipairs(bags) do
     local size, free, slots = CountContainer(bag, items)
     rec.bank[i] = { size, free }
-    rec.bankSlots[i] = { size = size, bag = BagItemLink(bag), slots = slots }
+    -- (id: which container it was, so Pint's Bags puts each one in the right place)
+    rec.bankSlots[i] = { id = bag, size = size, bag = BagItemLink(bag), slots = slots }
   end
   rec.items.bank = items
   rec.bankSeen = now()

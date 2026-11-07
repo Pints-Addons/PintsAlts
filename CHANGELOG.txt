@@ -1,5 +1,9 @@
 Pint's Alts - Changelog
 
+v1.6.3
+- WoW Forever: your bank is saved tab by tab (all the tabs you've bought), so Pint's Bags can show it from anywhere.
+  Visit the banker once on each character to save it the new way.
+
 v1.6.2
 - Every session starts with your characters sorted by level, highest first (the character list and the table).
   A different sort you pick holds until you log out.
