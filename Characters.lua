@@ -198,6 +198,12 @@ local function FillGear(c)
   end
   g.summary:SetText(il .. gs)
   g.reset:SetShown(Try and Try.Has(c) or false)
+  if g.wish then
+    local PL = _G.PintsLoot
+    local n = PL and PL.WishList and #PL.WishList((c.realm or "") .. "." .. (c.name or "")) or 0
+    g.wish:SetText("Wishlist" .. (n > 0 and (" (" .. n .. ")") or ""))
+    g.wish:SetShown(PL ~= nil and PL.WishList ~= nil and c.gear ~= nil)
+  end
   g.hint:SetShown(not (Try and Try.Has(c)) and c.gear ~= nil)
   g.nodata:SetShown(not c.gear)
 end
@@ -221,6 +227,16 @@ local function BuildGear(p)
   g.reset = CreateFrame("Button", nil, g, "UIPanelButtonTemplate"); g.reset:SetSize(150, 20); g.reset:SetText("Put back all gear")
   g.reset:SetPoint("TOPLEFT", g, "TOPLEFT", 318, -362); g.reset:Hide()
   g.reset:SetScript("OnClick", function() if sel and NS.Try then NS.Try.Clear(sel) end end)
+  -- the character's wishlist (kept by Pint's Loot, shared with it)
+  g.wish = CreateFrame("Button", nil, g, "UIPanelButtonTemplate"); g.wish:SetSize(100, 20)
+  g.wish:SetPoint("TOPLEFT", g, "TOPLEFT", 52, -362)
+  g.wish:SetScript("OnClick", function() if sel and NS.Try and NS.Try.OpenWishlist then NS.Try.OpenWishlist(sel) end end)
+  g.wish:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_TOP"); GameTooltip:AddLine("Wishlist")
+    GameTooltip:AddLine("Items this character is hoping for - click one to try it on.", 1, 1, 1, true)
+    GameTooltip:AddLine("Shared with Pint's Loot: star items in either add-on.", 0.6, 0.6, 0.6, true); GameTooltip:Show()
+  end)
+  g.wish:SetScript("OnLeave", function() GameTooltip:Hide() end)
   g.hint = g:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall"); g.hint:SetPoint("TOPLEFT", g, "TOPLEFT", 318, -366); g.hint:SetWidth(150); g.hint:SetJustifyH("LEFT")
   g.hint:SetText("Click any slot to try on other gear")
   g.statL, g.statR = {}, {}
@@ -875,7 +891,7 @@ function NS.RefreshCharacters()
     for k, t in pairs(page.subTabs) do t.sel:SetShown(k == sub) end
   end
   if NS.Try and NS.Try.PickerFor() and (NS.Try.PickerFor() ~= sel or sub ~= "gear") then NS.Try.HidePicker() end
-  if sub == "gear" then FillGear(sel) elseif sub == "grid" then FillGrid() elseif sub == "bags" then FillBags(sel)
+  if sub == "gear" then FillGear(sel) elseif sub == "bis" then NS.Bis.Fill(sel) elseif sub == "grid" then FillGrid() elseif sub == "bags" then FillBags(sel)
   elseif sub == "guild" then FillGuild(sel) elseif sub == "rep" then FillRep(sel) else FillSkills(sel) end
 end
 
@@ -919,6 +935,11 @@ function NS.BuildCharacters(parent)
   page.subTabs = {}
   local defs = { { "gear", "Character" }, { "grid", "Gear Grid" }, { "bags", "Bags" }, { "guild", "Guild Bank" },
                   { "rep", "Reputation" }, { "skills", "Skills" } }
+  -- BiS lists (WoW Forever, BisData.lua)
+  if NS.Bis and NS.Bis.Available() then
+    panes.bis = NS.Bis.Build(area)
+    table.insert(defs, 2, { "bis", "BiS" })
+  end
   for i, d in ipairs(defs) do
     local t = CreateFrame("Button", nil, page, "BackdropTemplate")
     t:SetSize(98, 24)

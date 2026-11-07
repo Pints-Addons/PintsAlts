@@ -56,3 +56,5 @@ LICENSE
 FEEDBACK
   Report a bug or suggest an idea: https://github.com/Pints-Addons/PintsAlts/issues
   Source code: https://github.com/Pints-Addons/PintsAlts
+
+BiS tab (WoW Forever): best-in-slot lists by level bracket from wowtbc.gg (https://wowtbc.gg/warcraftforever/bis-list/), used with credit.

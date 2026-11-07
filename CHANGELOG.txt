@@ -1,5 +1,27 @@
 Pint's Alts - Changelog
 
+v1.6
+- New BiS tab (WoW Forever): best-in-slot gear for each character's spec and level bracket (20, 30, 40, 50, 60), from
+  the WoW Forever BiS lists at wowtbc.gg. Each slot shows the picks with where they drop, the level needed, what you
+  wear now, which of your characters already has one, upgrade % (with Pint's Craft Upgrades) and a wishlist star.
+  Click to try one on. The spec comes from your talents (pick another from the spec button). It adapts to your
+  level: the list for the bracket you've reached, plus every piece of the next bracket's list you can already use,
+  so each level up adds more. Click a level button to see that whole list instead.
+  Type any level (1-60) in the Level box to plan ahead; "Mine" goes back to your own level.
+- Wishlist: a Share button sends the character's wishlist to another player (through Pint's Loot).
+- The window, gear list and recipe book close when a fight starts, so they never hide what's attacking you
+  (/alts combat keeps them open). The close buttons always work in combat.
+- Wishlist on the Character tab (with Pint's Loot): see any character's wishlist, with upgrade % and where each item
+  comes from; click one to try it on. Star items (or Alt-click them) in any slot's gear list to add them. It's the same
+  wishlist as Pint's Loot's, so changes show in both.
+- Gear list: Tab moves between the level boxes and the name filter (Shift-Tab goes back).
+- Wishlist: three views - By slot (a heading per gear slot), By dungeon (a heading per dungeon), or Best % (one list,
+  biggest upgrade first). Each item shows its name, slot and upgrade % with the boss and dungeon beneath.
+- Gear list: a Search button (or Enter in a level box) looks again with the levels you typed; the count line says which
+  levels it searched.
+- WoW Forever: leather, mail and shield items were missing from the gear list for classes that can wear them (the game
+  no longer lists armor skills), e.g. Naga Battle Gloves for a level 23 shaman. Now goes by the class instead.
+
 v1.5
 - WoW Forever: new Currencies view - every character's Merchant's Favor and Honor Points (and any other currency
   they have), with totals. Amounts save as they change, even with the Currency tab's groups folded.

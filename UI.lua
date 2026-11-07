@@ -533,6 +533,7 @@ function NS.OpenBook(c, prof)
     tinsert(UISpecialFrames, "PintsLedgerBook")
     book.title = book:CreateFontString(nil, "OVERLAY", "GameFontNormal"); book.title:SetPoint("TOPLEFT", 14, -12); book.title:SetWidth(400); book.title:SetJustifyH("LEFT")
     local close = CreateFrame("Button", nil, book, "UIPanelCloseButton"); close:SetPoint("TOPRIGHT", -2, -2)
+    close:SetScript("OnClick", function() book:Hide() end)
     book.search = CreateFrame("EditBox", nil, book, "InputBoxTemplate"); book.search:SetSize(150, 20); book.search:SetPoint("TOPLEFT", 20, -34)
     book.search:SetAutoFocus(false)
     book.search:SetScript("OnTextChanged", function() NS.RenderBook() end)
@@ -794,6 +795,7 @@ local function CreateWindow()
   local sub = win:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
   sub:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 1, -2); sub:SetText("Every character on your account, at a glance")
   local close = CreateFrame("Button", nil, win, "UIPanelCloseButton"); close:SetPoint("TOPRIGHT", -6, -6)
+  close:SetScript("OnClick", function() win:Hide() end)   -- (hide it directly: the game's own close goes through a path combat can block)
 
   -- search: every character's bags, bank and mail, plus recorded guild banks
   searchBox = CreateFrame("EditBox", "PintsLedgerSearchBox", win, "InputBoxTemplate")
@@ -1020,7 +1022,25 @@ end
 SLASH_PINTSLEDGER1 = "/alts"
 SLASH_PINTSLEDGER2 = "/ledger"
 SLASH_PINTSLEDGER3 = "/pl"
-SlashCmdList.PINTSLEDGER = function() L.Toggle() end
+SlashCmdList.PINTSLEDGER = function(msg)
+  if (msg or ""):lower():match("^%s*combat%s*$") then
+    PintsLedgerDB.ui.keepInCombat = not PintsLedgerDB.ui.keepInCombat
+    print("|cffd4a017Pint's Alts:|r " .. (PintsLedgerDB.ui.keepInCombat and "stays open in combat." or "closes when a fight starts."))
+    return
+  end
+  L.Toggle()
+end
+-- a fight starts: the window (and its gear list) get out of the way (/alts combat keeps them open instead)
+do
+  local f = CreateFrame("Frame"); f:RegisterEvent("PLAYER_REGEN_DISABLED")
+  f:SetScript("OnEvent", function()
+    if PintsLedgerDB and PintsLedgerDB.ui and PintsLedgerDB.ui.keepInCombat then return end
+    local w = _G.PintsLedgerFrame
+    if w and w:IsShown() then w:Hide() end
+    if NS.Try and NS.Try.HidePicker then NS.Try.HidePicker() end
+    if _G.PintsLedgerBook and _G.PintsLedgerBook:IsShown() then _G.PintsLedgerBook:Hide() end
+  end)
+end
 
 ---------------------------------------------------------------- minimap button
 local mm = CreateFrame("Frame")

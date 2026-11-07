@@ -34,8 +34,20 @@ local WAND_CLASSES = { PRIEST = true, MAGE = true, WARLOCK = true }
 local CLASS_BIT = { WARRIOR = 1, PALADIN = 2, HUNTER = 4, ROGUE = 8, PRIEST = 16, SHAMAN = 64, MAGE = 128, WARLOCK = 256, DRUID = 1024 }
 local LATE_ARMOR = { [403] = { HUNTER = true, SHAMAN = true }, [404] = { WARRIOR = true, PALADIN = true } }   -- learned at 40
 
+-- armor every class can wear from level 1 (Mail for hunters/shamans and Plate come at 40: LATE_ARMOR)
+local ARMOR_BASE = {
+  Leather = { WARRIOR = true, PALADIN = true, HUNTER = true, ROGUE = true, SHAMAN = true, DRUID = true },
+  Mail = { WARRIOR = true, PALADIN = true },
+  Shield = { WARRIOR = true, PALADIN = true, SHAMAN = true },
+}
 local function Knows(c, skill)
-  for _, s in ipairs(c.skillList or {}) do if s[2] ~= 1 and s[1] == skill then return true end end
+  local listsArmor = false
+  for _, s in ipairs(c.skillList or {}) do
+    if s[2] ~= 1 and s[1] == skill then return true end
+    if s[1] == "Cloth" then listsArmor = true end
+  end
+  -- WoW Forever's skill list has no armor skills (Cloth, Leather...): go by the class instead
+  if not listsArmor and ARMOR_BASE[skill] and ARMOR_BASE[skill][c.classFile or ""] then return true end
 end
 local function CanTrain(c, skill)
   for _, w in ipairs((NS.CLASS_WEAPONS or {})[c.classFile or ""] or {}) do if w == skill then return true end end
@@ -470,6 +482,7 @@ local function Build()
   P:SetScript("OnDragStart", P.StartMoving); P:SetScript("OnDragStop", P.StopMovingOrSizing)
   P.title = P:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge"); P.title:SetPoint("TOPLEFT", 16, -14)
   local close = CreateFrame("Button", nil, P, "UIPanelCloseButton"); close:SetPoint("TOPRIGHT", -4, -4)
+  close:SetScript("OnClick", function() P:Hide() end)
   -- sources
   P.checks = {}
   for i, d in ipairs(SRC) do
@@ -504,9 +517,24 @@ local function Build()
     T.Render()
   end
   P.lo:SetScript("OnEditFocusLost", SetRange); P.hi:SetScript("OnEditFocusLost", SetRange)
+  P.lt, P.dash = lt, dash
+  -- Search: take the levels (and name filter) as typed and look again; the item count blinks so you can see it did
+  local function Search()
+    P.lo:ClearFocus(); P.hi:ClearFocus(); P.search:ClearFocus()
+    SetRange()
+    P.searched = true
+    T.Render()
+    P.status:SetAlpha(0.15)
+    C_Timer.After(0.12, function() if P.status then P.status:SetAlpha(1) end end)
+  end
+  P.go = CreateFrame("Button", nil, P, "UIPanelButtonTemplate"); P.go:SetSize(64, 20); P.go:SetText("Search")
+  P.go:SetPoint("LEFT", P.hi, "RIGHT", 8, 0)
+  P.go:SetScript("OnClick", Search)
+  P.lo:SetScript("OnEnterPressed", Search); P.hi:SetScript("OnEnterPressed", Search)
+  P.doSearch = Search
   -- name filter
   P.search = CreateFrame("EditBox", nil, P, "InputBoxTemplate"); P.search:SetSize(150, 18); P.search:SetAutoFocus(false)
-  P.search:SetPoint("TOPRIGHT", -20, -106)
+  P.search:SetPoint("TOPRIGHT", -20, -106); P.search:SetWidth(130)
   P.search:SetScript("OnEscapePressed", function(self) self:SetText(""); self:ClearFocus() end)
   P.search:SetScript("OnTextChanged", function(self)
     self.ph:SetShown(self:GetText() == "" and not self:HasFocus())
@@ -516,6 +544,30 @@ local function Build()
   P.search:SetScript("OnEditFocusGained", function(self) self.ph:Hide() end)
   P.search:SetScript("OnEditFocusLost", function(self) self.ph:SetShown(self:GetText() == "") end)
   P.search.ph = P.search:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall"); P.search.ph:SetPoint("LEFT", 2, 0); P.search.ph:SetText("Filter by name...")
+  -- Tab moves between the boxes: from-level, to-level, name filter (Shift-Tab goes back)
+  local order = { P.lo, P.hi, P.search }
+  for i, box in ipairs(order) do
+    box:SetScript("OnTabPressed", function()
+      local nxt = order[(IsShiftKeyDown() and (i - 2) or i) % #order + 1]
+      nxt:SetFocus(); nxt:HighlightText()
+    end)
+  end
+  -- wishlist mode (Pint's Loot): a button to open the same list in Pint's Loot, where the name filter sits
+  P.lootBtn = CreateFrame("Button", nil, P, "UIPanelButtonTemplate"); P.lootBtn:SetSize(84, 20); P.lootBtn:SetPoint("TOPRIGHT", -20, -104)
+  P.lootBtn:SetText("Pint's Loot"); P.lootBtn:Hide()
+  -- share this character's wishlist with another player (Pint's Loot sends it, like a whisper)
+  P.shareBtn = CreateFrame("Button", nil, P, "UIPanelButtonTemplate"); P.shareBtn:SetSize(64, 20); P.shareBtn:SetPoint("RIGHT", P.lootBtn, "LEFT", -4, 0)
+  P.shareBtn:SetText("Share..."); P.shareBtn:Hide()
+  P.shareBtn:SetScript("OnClick", function() local PL = _G.PintsLoot; if PL and PL.AskShare and P.c then PL.AskShare(Key(P.c)) end end)
+  P.lootBtn:SetScript("OnClick", function() local PL = _G.PintsLoot; if PL and PL.Toggle then PL.Toggle("wish") end end)
+  -- wishlist views: grouped by gear slot, grouped by dungeon, or one list from the biggest upgrade down
+  P.views = {}
+  for i, v in ipairs({ { "slot", "By slot" }, { "dungeon", "By dungeon" }, { "pct", "Best %" } }) do
+    local b = CreateFrame("Button", nil, P, "UIPanelButtonTemplate"); b:SetSize(78, 20)
+    b:SetPoint("TOPLEFT", 14 + (i - 1) * 82, -104); b:SetText(v[2]); b.key = v[1]; b:Hide()
+    b:SetScript("OnClick", function(self) Opts().wishView = self.key; T.Render() end)
+    P.views[i] = b
+  end
   P.status = P:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall"); P.status:SetPoint("TOPLEFT", 16, -130); P.status:SetWidth(400); P.status:SetJustifyH("LEFT")
   -- list
   local sf = CreateFrame("ScrollFrame", "PintsLedgerGearPickerScroll", P, "UIPanelScrollFrameTemplate")
@@ -533,6 +585,20 @@ local function Build()
   P:Hide()
 end
 
+local function Place(r, y, h)
+  r:ClearAllPoints(); r:SetPoint("TOPLEFT", 0, -y); r:SetHeight(h)
+end
+-- a row as a group heading (wishlist): no icon, gold text, a darker band
+local function Heading(r, text)
+  r.head = true
+  r.icon:SetTexture(nil); r.star:Hide(); r.pct:SetText(""); r.lvl:SetText(""); r.src:SetText(""); r.sel:Hide()
+  r.name:SetText("|cffffd100" .. text .. "|r")
+  r.bg:SetColorTexture(1, 0.82, 0, 0.10)
+end
+local function Plain(r, i)
+  r.head = nil
+  r.bg:SetColorTexture(1, 1, 1, i % 2 == 0 and 0.04 or 0.0)
+end
 local function Row(i)
   local r = P.rows[i]
   if r then return r end
@@ -541,16 +607,37 @@ local function Row(i)
   r.bg = r:CreateTexture(nil, "BACKGROUND"); r.bg:SetAllPoints(); r.bg:SetColorTexture(1, 1, 1, i % 2 == 0 and 0.04 or 0.0)
   r.sel = r:CreateTexture(nil, "BORDER"); r.sel:SetAllPoints(); r.sel:SetColorTexture(1, 0.82, 0, 0.18)
   r:SetHighlightTexture("Interface\\Buttons\\UI-Listbox-Highlight2", "ADD")
-  r.icon = r:CreateTexture(nil, "ARTWORK"); r.icon:SetSize(28, 28); r.icon:SetPoint("LEFT", 2, 0)
-  r.name = r:CreateFontString(nil, "OVERLAY", "GameFontHighlight"); r.name:SetPoint("TOPLEFT", 36, -2); r.name:SetWidth(270); r.name:SetJustifyH("LEFT"); r.name:SetWordWrap(false)
-  r.src = r:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall"); r.src:SetPoint("BOTTOMLEFT", 36, 3); r.src:SetWidth(300); r.src:SetJustifyH("LEFT"); r.src:SetWordWrap(false)
+  -- (a column on the left for the wishlist star, then the item's icon)
+  r.icon = r:CreateTexture(nil, "ARTWORK"); r.icon:SetSize(28, 28); r.icon:SetPoint("LEFT", 22, 0)
+  r.name = r:CreateFontString(nil, "OVERLAY", "GameFontHighlight"); r.name:SetPoint("TOPLEFT", 56, -2); r.name:SetWidth(250); r.name:SetJustifyH("LEFT"); r.name:SetWordWrap(false)
+  r.src = r:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall"); r.src:SetPoint("BOTTOMLEFT", 56, 3); r.src:SetWidth(280); r.src:SetJustifyH("LEFT"); r.src:SetWordWrap(false)
   r.pct = r:CreateFontString(nil, "OVERLAY", "GameFontNormal"); r.pct:SetPoint("TOPRIGHT", -4, -3)
   r.lvl = r:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall"); r.lvl:SetPoint("BOTTOMRIGHT", -4, 3)
-  r:SetScript("OnClick", function(self)
-    if not P.c then return end
+  -- wishlist star (needs Pint's Loot, which keeps the wishlist): gold = on this character's wishlist
+  r.star = CreateFrame("Button", nil, r); r.star:SetSize(18, 18); r.star:SetPoint("RIGHT", r.icon, "LEFT", -2, 0)
+  r.star:SetFrameLevel(r:GetFrameLevel() + 3)
+  r.star.tex = r.star:CreateTexture(nil, "OVERLAY"); r.star.tex:SetAllPoints(); r.star.tex:SetTexture("Interface\\COMMON\\ReputationStar")
+  r.star.tex:SetTexCoord(0, 0.5, 0, 0.5)
+  r.star:SetScript("OnClick", function(self)
+    local e, PL = self:GetParent().e, _G.PintsLoot
+    if e and e.id and P.c and PL and PL.ToggleWishFor then PL.ToggleWishFor(Key(P.c), e.id, e.src) end
+  end)
+  r.star:SetScript("OnEnter", function(self)
+    local e, PL = self:GetParent().e, _G.PintsLoot
+    local on = e and P.c and PL and PL.IsWishedFor and PL.IsWishedFor(Key(P.c), e.id)
+    GameTooltip:SetOwner(self, "ANCHOR_LEFT")
+    GameTooltip:AddLine(on and ("Remove from " .. (P.c.name or "") .. "'s wishlist") or ("Add to " .. (P.c.name or "") .. "'s wishlist"))
+    GameTooltip:AddLine("Shared with Pint's Loot", 0.6, 0.6, 0.6); GameTooltip:Show()
+  end)
+  r.star:SetScript("OnLeave", function() GameTooltip:Hide() end)
+  r:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+  r:SetScript("OnClick", function(self, btn)
+    if not P.c or self.head then return end
+    local link = self.e and (self.e.link or select(2, GetItemInfo(self.e.id)))
+    if link and IsModifiedClick("CHATLINK") then ChatEdit_InsertLink(link); return end
+    if self.e and IsAltKeyDown() then self.star:Click(); return end
     if self.keep then T.Clear(P.c, P.slot) else
-      local link = self.e and (self.e.link or select(2, GetItemInfo(self.e.id)))
-      if link then T.Set(P.c, P.slot, link) end
+      if link then T.Set(P.c, self.slot or P.slot, link) end
     end
   end)
   r:SetScript("OnEnter", function(self)
@@ -559,6 +646,7 @@ local function Row(i)
     GameTooltip:SetOwner(self, "ANCHOR_LEFT"); GameTooltip:SetHyperlink(link)
     if self.e and self.e.src then GameTooltip:AddLine(" "); GameTooltip:AddLine(self.e.src, 1, 1, 1, true) end
     GameTooltip:AddLine(self.keep and "Click: put back what's equipped" or "Click: try it on", 0.4, 1, 0.4)
+    if not self.keep and _G.PintsLoot and _G.PintsLoot.ToggleWishFor then GameTooltip:AddLine("Alt-click or the star: wishlist", 0.6, 0.6, 0.6) end
     GameTooltip:Show()
   end)
   r:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -566,8 +654,133 @@ local function Row(i)
   return r
 end
 
+-- gold star = on the character's wishlist, grey = not (hidden without Pint's Loot)
+function T.Star(r, id)
+  local PL = _G.PintsLoot
+  if not (PL and PL.IsWishedFor and id and P.c) then r.star:Hide(); return end
+  local on = PL.IsWishedFor(Key(P.c), id)
+  r.star.tex:SetDesaturated(not on)
+  r.star.tex:SetVertexColor(on and 1 or 0.8, on and 1 or 0.8, on and 1 or 0.8)
+  r.star:SetAlpha(on and 1 or 0.75)
+  r.star:Show()
+end
+
+-- the picker's controls for choosing gear, and the wishlist's button, each shown in their own mode
+local function ShowControls(wish)
+  for _, cb in pairs(P.checks) do cb:SetShown(not wish) end
+  P.all:SetShown(not wish); P.lt:SetShown(not wish); P.dash:SetShown(not wish); P.lo:SetShown(not wish); P.hi:SetShown(not wish); P.go:SetShown(not wish)
+  P.search:SetShown(not wish); P.lootBtn:SetShown(wish); P.shareBtn:SetShown(wish and _G.PintsLoot ~= nil and _G.PintsLoot.AskShare ~= nil)
+  for _, b in ipairs(P.views or {}) do b:SetShown(wish) end
+end
+
+-- wishlist mode: everything on the character's wishlist (kept by Pint's Loot), any slot; click to try it on
+local WISH_ORDER = { 1, 2, 3, 15, 5, 4, 19, 9, 10, 6, 7, 8, 11, 12, 13, 14, 16, 17, 18 }
+local function RenderWish()
+  local c, PL = P.c, _G.PintsLoot
+  ShowControls(true)
+  P.title:SetText(("Wishlist  |cffa0a0a0- %s|r"):format(c.name or ""))
+  local list = PL and PL.WishList and PL.WishList(Key(c)) or {}
+  local S = _G.CraftUpgradesScore
+  local ctx = S and { role = S.RoleFor and S.RoleFor(c), class = c.classFile, gear = function(s) return c.gear and c.gear[s] end }
+  local rank = {}; for i, s in ipairs(WISH_ORDER) do rank[s] = rank[s] or i end
+  local shown, pending = {}, 0
+  for _, e in ipairs(list) do
+    local name, link, q, _, req, _, _, _, loc, icon = GetItemInfo(e.id)
+    if name then
+      local slots = SLOTS_FOR[loc or ""]
+      e.name, e.link, e.q, e.req, e.icon, e.slot = name, link, q, req or 0, icon, slots and slots[1]
+      e.pct, e.empty = nil, nil
+      if ctx and S.UpgradeVs and e.slot then
+        local ok, pct, empty = pcall(S.UpgradeVs, link, ctx)
+        if ok then e.pct, e.empty = pct, empty end
+      end
+      shown[#shown + 1] = e
+    else
+      pending = pending + 1
+      if C_Item and C_Item.RequestLoadItemDataByID then C_Item.RequestLoadItemDataByID(e.id) end
+    end
+  end
+  local view = Opts().wishView or "slot"
+  for _, b in ipairs(P.views) do
+    local on = b.key == view
+    b:SetText((on and "|cff40ff40" or "") .. ({ slot = "By slot", dungeon = "By dungeon", pct = "Best %" })[b.key] .. "|r")
+  end
+  -- where it comes from: "Dungeon - Boss (40%)" -> dungeon, boss
+  for _, e in ipairs(shown) do
+    local plain = (e.src or ""):gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")
+    local d, rest = plain:match("^(.-) %- (.+)$")
+    e.dungeon, e.boss = d or (plain ~= "" and plain or "Other"), rest
+    e.score = e.empty and 1e9 or (e.pct or -1e9)
+  end
+  local function byPct(a, b) if a.score ~= b.score then return a.score > b.score end; return a.name < b.name end
+  local groups = {}
+  if view == "pct" then
+    table.sort(shown, byPct)
+    groups[1] = { items = shown }
+  else
+    local byKey, order = {}, {}
+    for _, e in ipairs(shown) do
+      local k = view == "slot" and (e.slot and SLOT_NAME[e.slot] or "Other") or e.dungeon
+      if not byKey[k] then byKey[k] = { name = k, items = {}, rank = view == "slot" and (rank[e.slot or 0] or 99) or 0 }; order[#order + 1] = byKey[k] end
+      table.insert(byKey[k].items, e)
+    end
+    table.sort(order, function(a, b) if a.rank ~= b.rank then return a.rank < b.rank end; return a.name < b.name end)
+    for _, g in ipairs(order) do table.sort(g.items, byPct); groups[#groups + 1] = g end
+  end
+  local lvl, i, y = c.level or 1, 0, 0
+  local HEAD_H = 18
+  for _, g in ipairs(groups) do
+    if g.name then
+      i = i + 1
+      local r = Row(i)
+      Place(r, y, HEAD_H); Heading(r, g.name .. "  |cff808080(" .. #g.items .. ")|r")
+      r.keep, r.e, r.slot = false, nil, nil
+      r:Show()
+      y = y + HEAD_H + 2
+    end
+    for _, e in ipairs(g.items) do
+      if i >= ROWS then break end
+      i = i + 1
+      local r = Row(i)
+      Place(r, y, ROW_H - 2); Plain(r, i)
+      y = y + ROW_H
+      r.keep, r.e, r.slot = false, e, e.slot
+      r.icon:SetTexture(e.icon)
+      local col = ITEM_QUALITY_COLORS and ITEM_QUALITY_COLORS[e.q or 1]
+      r.name:SetText(((col and col.hex) or "|cffffffff") .. e.name .. "|r" .. (e.slot and SLOT_NAME[e.slot] and ("  |cff909090" .. SLOT_NAME[e.slot] .. "|r") or ""))
+      -- second line: boss and dungeon (just the boss when the heading already names the dungeon)
+      local where = e.src or ""
+      if e.boss then
+        local boss, chance = e.boss:match("^(.-)%s*(%(%d+%%%))$")
+        boss = boss or e.boss
+        where = (view == "dungeon") and e.boss or (boss .. " - " .. e.dungeon .. (chance and (" " .. chance) or ""))
+      end
+      r.src:SetText("|cffd4a24c" .. where .. "|r")
+      if e.empty then r.pct:SetText("|cff40ff40new slot|r")
+      elseif e.pct then r.pct:SetText((e.pct >= 0.5 and "|cff40ff40+" or (e.pct <= -0.5 and "|cffff4040" or "|cffa0a0a0")) .. math.floor(e.pct + 0.5) .. "%|r")
+      else r.pct:SetText("") end
+      r.lvl:SetText(e.req > lvl and ("|cff66ccfflvl " .. e.req .. "|r") or ("|cffa0a0a0lvl " .. e.req .. "|r"))
+      r.sel:SetShown(e.slot ~= nil and T.Link(c, e.slot) == e.link)
+      T.Star(r, e.id)
+      r:Show()
+    end
+  end
+  for k = i + 1, #P.rows do P.rows[k]:Hide() end
+  P.list:SetHeight(math.max(1, y))
+  if not PL then
+    P.status:SetText("|cffff8040The wishlist is kept by Pint's Loot - enable it to use the wishlist.|r")
+  elseif #shown == 0 and pending == 0 then
+    P.status:SetText("Nothing on the wishlist yet - star items in any slot's gear list, or in Pint's Loot.")
+  else
+    P.status:SetText(("%d items  |cffa0a0a0- click to try one on, the star removes it|r%s"):format(#shown,
+      pending > 0 and ("  |cffffd100- loading %d more...|r"):format(pending) or ""))
+  end
+end
+
 function T.Render()
   if not P or not P:IsShown() or not P.c then return end
+  if P.mode == "wish" then return RenderWish() end
+  ShowControls(false)
   local c, slot, o = P.c, P.slot, Opts()
   local lvl = c.level or 1
   P.title:SetText(("%s  |cffa0a0a0- %s|r"):format(SLOT_NAME[slot] or "?", c.name or ""))
@@ -608,6 +821,7 @@ function T.Render()
   -- first row: keep / put back what's equipped
   local i = 1
   local r = Row(1)
+  Place(r, 0, ROW_H - 2); Plain(r, 1)
   r.keep, r.e = true, nil
   local eq = c.gear and c.gear[slot]
   local eqName, eqQ, eqIcon
@@ -617,12 +831,14 @@ function T.Render()
   r.src:SetText("|cffa0a0a0Currently equipped - click to put it back|r")
   r.pct:SetText(""); r.lvl:SetText("")
   r.sel:SetShown(current == eq)
+  r.slot = nil; r.star:Hide()
   r:Show()
   local n = math.min(#shown, ROWS - 1)
   for k = 1, n do
     local e = shown[k]
     i = i + 1
     r = Row(i)
+    Place(r, (i - 1) * ROW_H, ROW_H - 2); Plain(r, i)
     r.keep, r.e = false, e
     r.icon:SetTexture(e.icon)
     local col = ITEM_QUALITY_COLORS and ITEM_QUALITY_COLORS[e.q or 1]
@@ -633,28 +849,57 @@ function T.Render()
     else r.pct:SetText("") end
     r.lvl:SetText(e.req > lvl and ("|cff66ccfflvl " .. e.req .. "|r") or ("|cffa0a0a0lvl " .. e.req .. "|r"))
     r.sel:SetShown(current ~= nil and e.link == current)
+    r.slot = nil
+    T.Star(r, e.id)
     r:Show()
   end
   for k = i + 1, #P.rows do P.rows[k]:Hide() end
   P.list:SetHeight(math.max(1, i * ROW_H))
   local more = #shown > n and ("  (best %d shown)"):format(n) or ""
-  P.status:SetText(("%d items%s%s"):format(#shown, more, pending > 0 and ("  |cffffd100- loading %d more...|r"):format(pending) or "")
+  P.status:SetText(("%d items for levels %d-%d%s%s"):format(#shown, math.max(0, lvl - o.below), math.min(60, lvl + o.ahead), more,
+    pending > 0 and ("  |cffffd100- loading %d more...|r"):format(pending) or "")
     .. (S and "" or "  |cffff8040(enable Craft Upgrades for upgrade %)|r"))
 end
 
 function T.OpenPicker(owner, c, slot)
   if not c or not slot then return end
   if not P then Build() end
-  if P:IsShown() and P.c == c and P.slot == slot then P:Hide(); return end
-  P.c, P.slot = c, slot
+  if P:IsShown() and P.mode ~= "wish" and P.c == c and P.slot == slot then P:Hide(); return end
+  P.c, P.slot, P.mode = c, slot, nil
+  T.PlacePicker()
+  P:Show()
+  T.Render()
+end
+function T.OpenWishlist(c)
+  if not c then return end
+  if not P then Build() end
+  if P:IsShown() and P.mode == "wish" and P.c == c then P:Hide(); return end
+  P.c, P.slot, P.mode = c, nil, "wish"
+  T.PlacePicker()
+  P:Show()
+  T.Render()
+end
+function T.PlacePicker()
   P:ClearAllPoints()
   local main = _G.PintsLedgerFrame
   local right = main and main:GetRight()
   if right and right + 440 < UIParent:GetRight() then P:SetPoint("TOPLEFT", main, "TOPRIGHT", -6, -40)
   elseif main and main:GetLeft() and main:GetLeft() > 440 then P:SetPoint("TOPRIGHT", main, "TOPLEFT", 6, -40)
   else P:SetPoint("TOPRIGHT", main or UIParent, "TOPRIGHT", -14, -96) end
-  P:Show()
-  T.Render()
+end
+-- the wishlist changed (here or in Pint's Loot): redraw
+do
+  local f = CreateFrame("Frame"); f:RegisterEvent("PLAYER_LOGIN")
+  f:SetScript("OnEvent", function()
+    local PL = _G.PintsLoot
+    if not PL then return end
+    local prev = PL.OnWishChanged
+    PL.OnWishChanged = function(...)
+      if prev then pcall(prev, ...) end
+      if P and P:IsShown() then T.Render() end
+      if NS.RefreshCharacters then NS.RefreshCharacters() end
+    end
+  end)
 end
 function T.HidePicker() if P then P:Hide() end end
 function T.PickerFor() return P and P:IsShown() and P.c end
