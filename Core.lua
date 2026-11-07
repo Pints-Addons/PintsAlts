@@ -612,6 +612,10 @@ ev:SetScript("OnEvent", function(_, event, arg1, arg2)
     PintsLedgerDB = PintsLedgerDB or {}
     PintsLedgerDB.chars = PintsLedgerDB.chars or {}
     PintsLedgerDB.ui = PintsLedgerDB.ui or {}
+    -- every session starts sorted by level, highest first (the character list and the table); a sort you pick
+    -- holds for the rest of the session
+    PintsLedgerDB.ui.charSort = "level"
+    PintsLedgerDB.ui.sortCol, PintsLedgerDB.ui.sortAsc = 2, false
     PintsLedgerDB.minimap = PintsLedgerDB.minimap or { hide = false }
     PintsLedgerDB.names = PintsLedgerDB.names or {}
     PintsLedgerDB.guilds = PintsLedgerDB.guilds or {}
