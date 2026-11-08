@@ -1,5 +1,9 @@
 Pint's Alts - Changelog
 
+v1.6.4
+- BiS: upgrade % is worked out for the list's spec (a Restoration list scores healing), not a guess from the talents.
+- WoW Forever: your talent tree is read (with Pint's Tips), so the BiS list starts on the right spec.
+
 v1.6.3
 - WoW Forever: your bank is saved tab by tab (all the tabs you've bought), so Pint's Bags can show it from anywhere.
   Visit the banker once on each character to save it the new way.

@@ -86,6 +86,22 @@ function B.SpecFor(c)
   if k and PintsBisData.specs[k] then return k, true end
   return ClassSpecs(cls)[1], true
 end
+-- how a spec's gear is scored (Craft Upgrades' roles): the list you're looking at decides, so a Restoration list
+-- is scored for healing even before the game has told us your talents
+local SPEC_ROLE = {
+  restoration = "healer", holy = "healer", discipline = "healer",
+  protection = "tank", ["feral-tank"] = "tank", ["feral-dps"] = "agile", feral = "agile",
+  balance = "caster", elemental = "caster", shadow = "caster", arcane = "caster", fire = "caster", frost = "caster",
+  affliction = "caster", demonology = "caster", destruction = "caster",
+  enhancement = "melee", arms = "melee", fury = "melee", retribution = "melee",
+  assassination = "agile", combat = "agile", subtlety = "agile",
+  ["beast-mastery"] = "hunter", marksmanship = "hunter", survival = "hunter",
+}
+function B.SpecRole(spec, cls)
+  if not spec then return nil end
+  local s = cls and spec:gsub("%-" .. cls .. "$", "") or spec
+  return SPEC_ROLE[s]
+end
 -- the bracket you've reached (the list for it is fully usable) and the next one (parts of it already are)
 local function Floor(level)
   local f = BRACKETS[1]
@@ -354,7 +370,10 @@ function B.Fill(c)
   local D = PintsBisData
   local held = Holdings(c)
   local S = _G.CraftUpgradesScore
-  local ctx = S and S.UpgradeVs and { role = S.RoleFor and S.RoleFor(c), class = c.classFile, gear = function(s) return c.gear and c.gear[s] end }
+  -- scored for this list's spec (a role you set for the character in Craft Upgrades still comes first)
+  local over = CraftUpgradesDB and CraftUpgradesDB.role and CraftUpgradesDB.role[(c.name or "") .. "-" .. (c.realm or "")]
+  local role = (over and S and S.ROLES and S.ROLES[over] and over) or B.SpecRole(spec, cls) or (S and S.RoleFor and S.RoleFor(c))
+  local ctx = S and S.UpgradeVs and { role = role, class = c.classFile, gear = function(s) return c.gear and c.gear[s] end }
   local PL = _G.PintsLoot
   -- the dungeon filter: count what each dungeon has in this list (for the menu), then keep only the picked one's
   local counts = {}

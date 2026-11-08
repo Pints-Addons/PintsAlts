@@ -102,6 +102,17 @@ local function ScanTalents()
     end
   end
   rec.spec = best
+  -- WoW Forever: the old talent functions say nothing there; Pint's Tips reads the trees the modern way
+  if not best and _G.PintsTips and _G.PintsTips.ReadGrid then
+    local ok, g = pcall(_G.PintsTips.ReadGrid, false)
+    if ok and g then
+      for i = 1, 3 do
+        local t = g[i]
+        if t and type(t.points) == "number" and t.points > bestPts then best, bestPts, rec.specIndex = t.name, t.points, i end
+      end
+      rec.spec = best
+    end
+  end
   -- no talent points to go on: the specialization the game says you chose, if it has one
   if not best then
     local get = (C_SpecializationInfo and C_SpecializationInfo.GetSpecialization) or GetSpecialization
