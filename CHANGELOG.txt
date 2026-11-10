@@ -1,6 +1,12 @@
 Pint's Alts - Changelog
 
 v1.6.5
+- BiS: item tooltips show where the item ranks on your BiS list ("BiS #7 of 9 - Head"), for the character picked
+  in Pint's Alts while it's open, else the one you're playing. It follows the spec and level the BiS tab shows.
+- BiS: the piece you're wearing has a light row, so you can spot it in each slot's list.
+- Character tab: each gear slot shows its BiS rank (#1 in gold) just outside the slot.
+- Gear picker (click a slot): a BiS button next to the title switches the list to just that slot's BiS picks
+  for your level, in rank order, with the one you wear lit up. Click it again for all gear.
 - WoW Forever: your bank is saved again. It was being read while you were away from the banker (or before its tabs
   had arrived), when the game says every tab is empty - so the saved bank came out empty. It's now read only at the
   banker, once the tabs are there. Visit your banker once on each character to save it.

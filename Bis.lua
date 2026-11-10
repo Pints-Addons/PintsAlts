@@ -134,6 +134,28 @@ local function ByLevel(specLists, level)
   return out, f, nxt and nextCap, fromNext
 end
 
+-- one gear slot's BiS picks at the character's own level (the gear picker's BiS tab):
+-- { id, rank, cap, src, kind, name }, plus the spec name, the level and the bracket reached
+local INV_KEYS = { [1] = { "head" }, [2] = { "neck" }, [3] = { "shoulder" }, [15] = { "back" }, [5] = { "chest" }, [9] = { "wrist" },
+  [10] = { "hands" }, [6] = { "waist" }, [7] = { "legs" }, [8] = { "feet" }, [11] = { "finger" }, [12] = { "finger" },
+  [13] = { "trinket" }, [14] = { "trinket" }, [16] = { "mainhand", "twohand" }, [17] = { "offhand" }, [18] = { "ranged" } }
+function B.SlotList(c, inv)
+  if not (c and B.Available()) then return nil end
+  local cls = CLS[c.classFile or ""]
+  local spec = cls and B.SpecFor(c)
+  if not spec then return nil end
+  local lvl = c.level or 1
+  local list, f, nextCap, n = ByLevel(PintsBisData.specs[spec], lvl)
+  local out = {}
+  for _, k in ipairs(INV_KEYS[inv] or {}) do
+    for rank, pair in ipairs(list[k] or {}) do
+      local it = PintsBisData.items[pair[1]] or {}
+      out[#out + 1] = { id = pair[1], rank = rank, cap = pair[2], src = it[1] and PintsBisData.sources[it[1]] or "", kind = k, name = it[3] }
+    end
+  end
+  return out, Pretty(spec, cls), lvl, f, nextCap
+end
+
 ---------------------------------------------------------------- who has an item already
 local function Holdings(c)
   local out = {}   -- [itemID] = "worn" | "Name (bags)" ...
@@ -332,32 +354,109 @@ function B.Build(parent)
   return pane
 end
 
+-- the list the BiS tab shows for this character right now (the bracket or level you picked there)
+function B.ListFor(c)
+  local cls = CLS[c.classFile or ""]
+  local spec, auto = cls and B.SpecFor(c)
+  if not spec then return nil end
+  local planned = atLevel[Key(c)]
+  local lvl = planned or c.level or 1
+  local pickCap = view[Key(c)]
+  local lists = PintsBisData.specs[spec]
+  if pickCap then
+    local list = {}
+    for sd, ids in pairs(lists[pickCap] or {}) do local l = {}; for _, id in ipairs(ids) do l[#l + 1] = { id, pickCap } end; list[sd] = l end
+    return list, spec, auto, cls, lvl, planned, pickCap
+  end
+  local list, f, nextCap, n = ByLevel(lists, lvl)
+  return list, spec, auto, cls, lvl, planned, nil, f, nextCap, n
+end
+
+-- where an item sits on that list: rank in its slot, slot name, spec name, how many in the slot, level
+local rankCache = {}
+function B.RankOf(c, id)
+  if not (c and id and B.Available()) then return nil end
+  local cls = CLS[c.classFile or ""]
+  local spec = cls and B.SpecFor(c)
+  if not spec then return nil end
+  local lvl = atLevel[Key(c)] or c.level or 1
+  local k = Key(c) .. "|" .. spec .. "|" .. lvl .. "|" .. tostring(view[Key(c)])
+  local m = rankCache[k]
+  if not m or GetTime() - m.t > 30 then
+    m = { t = GetTime(), at = {} }
+    local list = B.ListFor(c)
+    for _, sd in ipairs(SLOTS) do
+      local l = list and list[sd[1]] or {}
+      for rank, pair in ipairs(l) do
+        if not m.at[pair[1]] then m.at[pair[1]] = { rank, sd[3], #l } end
+      end
+    end
+    rankCache[k] = m
+  end
+  local r = m.at[id]
+  if r then return r[1], r[2], Pretty(spec, cls), r[3], lvl end
+end
+
+-- item tooltips everywhere: the item's rank on the BiS list (the character picked in Pint's Alts while it's open,
+-- else the character you're playing)
+local function Whose()
+  local c = NS.SelectedChar and NS.SelectedChar()
+  if c then return c end
+  local L = NS.L
+  local r, n = L and L.Me and L.Me()
+  local rec = r and n and PintsLedgerDB and PintsLedgerDB.chars and PintsLedgerDB.chars[r] and PintsLedgerDB.chars[r][n]
+  if rec then rec.name, rec.realm = rec.name or n, rec.realm or r end
+  return rec
+end
+local function Secret(v) return type(issecretvalue) == "function" and issecretvalue(v) end
+local function TipLine(tt, id)
+  if not id or Secret(id) or not B.Available() then return end
+  local c = Whose()
+  if not c then return end
+  local ok, rank, slot, spec, of, lvl = pcall(B.RankOf, c, id)
+  if not (ok and rank) then return end
+  tt:AddLine(("|cffffd100BiS #%d|r of %d - %s  |cff909090(%s, level %d - %s)|r"):format(rank, of, slot, spec, lvl, c.name or "?"),
+    rank == 1 and 1 or 0.85, rank == 1 and 0.82 or 0.85, rank == 1 and 0 or 0.85)
+  tt:Show()
+end
+local TIPS = { GameTooltip = true, ItemRefTooltip = true, ShoppingTooltip1 = true, ShoppingTooltip2 = true }
+local function Allowed(tt) local n = tt and tt.GetName and tt:GetName(); return n and TIPS[n] end
+if TooltipDataProcessor and TooltipDataProcessor.AddTooltipPostCall and Enum and Enum.TooltipDataType and Enum.TooltipDataType.Item then
+  TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Item, function(tt, data)
+    if not Allowed(tt) then return end
+    local id = data and data.id
+    if not id and tt.GetItem then local _, link = tt:GetItem(); id = link and not Secret(link) and tonumber(link:match("item:(%d+)")) end
+    pcall(TipLine, tt, id)
+  end)
+else
+  for n in pairs(TIPS) do
+    local tt = _G[n]
+    if tt and tt.HookScript then
+      pcall(tt.HookScript, tt, "OnTooltipSetItem", function(self)
+        local _, link = self:GetItem()
+        pcall(TipLine, self, link and not Secret(link) and tonumber(link:match("item:(%d+)")))
+      end)
+    end
+  end
+end
+
 function B.Fill(c)
   if not pane or not c then return end
   pane.c = c
-  local cls = CLS[c.classFile or ""]
-  local spec, auto = cls and B.SpecFor(c)
+  rankCache = {}
+  local list, spec, auto, cls, lvl, planned, pickCap, f, nextCap, n = B.ListFor(c)
   if not spec then
     for _, r in ipairs(rows) do r:Hide() end
     pane.none:SetText("No BiS list for this character's class."); pane.none:Show(); return
   end
   pane.none:Hide()
   pane.spec:SetText(Pretty(spec, cls) .. (auto and "  |cff909090(auto)|r" or "") .. "  |cffaaaaaav|r")
-  local planned = atLevel[Key(c)]
-  local lvl = planned or c.level or 1
   if not pane.lvl:HasFocus() then pane.lvl:SetText(tostring(lvl)) end
   pane.mine:SetEnabled(planned ~= nil)
-  local pickCap = view[Key(c)]
-  local lists = PintsBisData.specs[spec]
-  local list, note
+  local note
   if pickCap then
-    -- a bracket picked by hand: that whole list
-    list = {}
-    for sd, ids in pairs(lists[pickCap] or {}) do local l = {}; for _, id in ipairs(ids) do l[#l + 1] = { id, pickCap } end; list[sd] = l end
     note = ("%s: the level %d list (click it again for your level).  Source: wowtbc.gg"):format(Pretty(spec, cls), pickCap)
   else
-    local f, nextCap, n
-    list, f, nextCap, n = ByLevel(lists, lvl)
     note = ("%s at level %d%s: the level %d list%s.  Source: wowtbc.gg"):format(Pretty(spec, cls), lvl,
       planned and (" |cff80c0ff(planning ahead - you're " .. (c.level or 1) .. ")|r") or "", f,
       (nextCap and n > 0) and (", plus |cff40ff40" .. n .. "|r piece" .. (n == 1 and "" or "s") .. " from the level " .. nextCap .. " list you can use now") or "")
@@ -415,7 +514,9 @@ function B.Fill(c)
         r.e = { id = id, slot = sd[2], src = src }
         r.rank:SetText(pair[3] == 1 and ("|cffffd100" .. pair[3] .. ".|r") or ("|cffc0c0c0" .. pair[3] .. ".|r"))
         r:ClearAllPoints(); r:SetPoint("TOPLEFT", 0, -y); r:SetHeight(ROW_H - 2)
-        r.bg:SetColorTexture(1, 1, 1, i % 2 == 0 and 0.04 or 0)
+        -- what this character wears now: a light row, so it's easy to find in the list
+        local wornIt = held[id] and held[id]:find("worn") and held[id]:find("40ff40")
+        if wornIt then r.bg:SetColorTexture(0.75, 1, 0.75, 0.22) else r.bg:SetColorTexture(1, 1, 1, i % 2 == 0 and 0.04 or 0) end
         local name, link, q, _, req = GetItemInfo(id)
         local icon = select(5, GetItemInfoInstant(id))
         if not name and C_Item and C_Item.RequestLoadItemDataByID then C_Item.RequestLoadItemDataByID(id) end

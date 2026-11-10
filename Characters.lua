@@ -113,6 +113,11 @@ local function SlotButton(parent, slot, x, y)
     if button == "RightButton" then NS.Try.Clear(sel, self.slot)
     else if NS.HideUpgrades then NS.HideUpgrades() end; NS.Try.OpenPicker(self, sel, self.slot) end
   end)
+  -- its rank on the BiS list, just outside the slot (left column: left side; right column: right side; weapons: below)
+  b.bis = b:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+  if x < 100 then b.bis:SetPoint("RIGHT", b, "LEFT", -2, 0)
+  elseif y < -300 then b.bis:SetPoint("TOP", b, "BOTTOM", 0, -1)
+  else b.bis:SetPoint("LEFT", b, "RIGHT", 3, 0) end
   slotButtons[slot] = b
   return b
 end
@@ -124,6 +129,8 @@ local function FillGear(c)
     if Try then link, isTrial = Try.Link(c, slot) end
     b.link, b.isTrial = link, isTrial
     b.trial:SetShown(isTrial)
+    local rank = link and NS.Bis and NS.Bis.RankOf and NS.Bis.RankOf(c, tonumber(link:match("item:(%d+)")))
+    b.bis:SetText(rank and ((rank == 1 and "|cffffd100" or "|cffe0e0e0") .. "#" .. rank .. "|r") or "")
     if link then
       local tex = GetItemIcon and GetItemIcon(link) or (C_Item and C_Item.GetItemIconByID(link))
       b.icon:SetTexture(tex or 134400)
@@ -209,27 +216,28 @@ local function FillGear(c)
 end
 
 local function BuildGear(p)
+  local DX = 16   -- (room left of the slots for their BiS numbers)
   local g = CreateFrame("Frame", nil, p); g:SetAllPoints()
-  for i, s in ipairs(LEFT) do SlotButton(g, s[1], 10, -10 - (i - 1) * 42) end
-  for i, s in ipairs(RIGHT) do SlotButton(g, s[1], 430, -10 - (i - 1) * 42) end
-  for i, s in ipairs(BOTTOM) do SlotButton(g, s[1], 166 + (i - 1) * 46, -352) end
-  g.name = g:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge"); g.name:SetPoint("TOP", g, "TOPLEFT", 239, -12)
+  for i, s in ipairs(LEFT) do SlotButton(g, s[1], 10 + DX, -10 - (i - 1) * 42) end
+  for i, s in ipairs(RIGHT) do SlotButton(g, s[1], 430 + DX, -10 - (i - 1) * 42) end
+  for i, s in ipairs(BOTTOM) do SlotButton(g, s[1], 166 + DX + (i - 1) * 46, -352) end
+  g.name = g:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge"); g.name:SetPoint("TOP", g, "TOPLEFT", 239 + DX, -12)
   g.info = g:CreateFontString(nil, "OVERLAY", "GameFontHighlight"); g.info:SetPoint("TOP", g.name, "BOTTOM", 0, -3)
   g.guild = g:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall"); g.guild:SetPoint("TOP", g.info, "BOTTOM", 0, -2)
-  g.portrait = g:CreateTexture(nil, "ARTWORK"); g.portrait:SetSize(96, 96); g.portrait:SetPoint("TOP", g, "TOPLEFT", 239, -70)
+  g.portrait = g:CreateTexture(nil, "ARTWORK"); g.portrait:SetSize(96, 96); g.portrait:SetPoint("TOP", g, "TOPLEFT", 239 + DX, -70)
   g.lookNote = g:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
   g.lookNote:SetPoint("TOP", g.portrait, "BOTTOM", 0, -10); g.lookNote:SetWidth(260); g.lookNote:SetJustifyH("CENTER")
   local model = NS.Try and NS.Try.CreateModel(g, 360, 262)
   if model then
-    g.model = model; model:SetPoint("TOP", g, "TOPLEFT", 239, -62); model:SetFrameLevel(g:GetFrameLevel() + 1); model:Hide()
+    g.model = model; model:SetPoint("TOP", g, "TOPLEFT", 239 + DX, -62); model:SetFrameLevel(g:GetFrameLevel() + 1); model:Hide()
   end
-  g.summary = g:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall"); g.summary:SetPoint("TOP", g, "TOPLEFT", 239, -332)
+  g.summary = g:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall"); g.summary:SetPoint("TOP", g, "TOPLEFT", 239 + DX, -332)
   g.reset = CreateFrame("Button", nil, g, "UIPanelButtonTemplate"); g.reset:SetSize(150, 20); g.reset:SetText("Put back all gear")
-  g.reset:SetPoint("TOPLEFT", g, "TOPLEFT", 318, -362); g.reset:Hide()
+  g.reset:SetPoint("TOPLEFT", g, "TOPLEFT", 318 + DX, -362); g.reset:Hide()
   g.reset:SetScript("OnClick", function() if sel and NS.Try then NS.Try.Clear(sel) end end)
   -- the character's wishlist (kept by Pint's Loot, shared with it)
   g.wish = CreateFrame("Button", nil, g, "UIPanelButtonTemplate"); g.wish:SetSize(100, 20)
-  g.wish:SetPoint("TOPLEFT", g, "TOPLEFT", 52, -362)
+  g.wish:SetPoint("TOPLEFT", g, "TOPLEFT", 52 + DX, -362)
   g.wish:SetScript("OnClick", function() if sel and NS.Try and NS.Try.OpenWishlist then NS.Try.OpenWishlist(sel) end end)
   g.wish:SetScript("OnEnter", function(self)
     GameTooltip:SetOwner(self, "ANCHOR_TOP"); GameTooltip:AddLine("Wishlist")
@@ -237,16 +245,16 @@ local function BuildGear(p)
     GameTooltip:AddLine("Shared with Pint's Loot: star items in either add-on.", 0.6, 0.6, 0.6, true); GameTooltip:Show()
   end)
   g.wish:SetScript("OnLeave", function() GameTooltip:Hide() end)
-  g.hint = g:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall"); g.hint:SetPoint("TOPLEFT", g, "TOPLEFT", 318, -366); g.hint:SetWidth(150); g.hint:SetJustifyH("LEFT")
+  g.hint = g:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall"); g.hint:SetPoint("TOPLEFT", g, "TOPLEFT", 318 + DX, -366); g.hint:SetWidth(150); g.hint:SetJustifyH("LEFT")
   g.hint:SetText("Click any slot to try on other gear")
   g.statL, g.statR = {}, {}
   for i = 1, 6 do
-    g.statL[i] = g:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall"); g.statL[i]:SetPoint("TOPLEFT", 500, -14 - (i - 1) * 18)
-    g.statR[i] = g:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall"); g.statR[i]:SetPoint("TOPLEFT", 500, -136 - (i - 1) * 18)
+    g.statL[i] = g:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall"); g.statL[i]:SetPoint("TOPLEFT", 500 + DX + 8, -14 - (i - 1) * 18)
+    g.statR[i] = g:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall"); g.statR[i]:SetPoint("TOPLEFT", 500 + DX + 8, -136 - (i - 1) * 18)
   end
   Header(g, "Attributes", 500, 2)
-  g.res = g:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall"); g.res:SetPoint("TOPLEFT", 500, -256); g.res:SetWidth(200); g.res:SetJustifyH("LEFT")
-  g.nodata = g:CreateFontString(nil, "OVERLAY", "GameFontDisable"); g.nodata:SetPoint("TOP", g, "TOPLEFT", 239, -300)
+  g.res = g:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall"); g.res:SetPoint("TOPLEFT", 500 + DX + 8, -256); g.res:SetWidth(200); g.res:SetJustifyH("LEFT")
+  g.nodata = g:CreateFontString(nil, "OVERLAY", "GameFontDisable"); g.nodata:SetPoint("TOP", g, "TOPLEFT", 239 + DX, -300)
   g.nodata:SetText("Log into this character once to record its gear.")
   return g
 end
@@ -783,6 +791,8 @@ local function ShowSub(key)
 end
 
 NS.ShowSub = function(k) ShowSub(k) end
+-- the character picked here, while the window is open (BiS ranks in item tooltips follow it)
+function NS.SelectedChar() return page and page:IsVisible() and sel or nil end
 function NS.SelectCharacter(realm, name, subKey)
   for _, ch in ipairs(L.Characters(true)) do
     if ch.realm == realm and ch.name == name then ch.rec.name, ch.rec.realm = ch.name, ch.realm; sel = ch.rec end

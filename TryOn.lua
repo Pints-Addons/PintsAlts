@@ -483,6 +483,16 @@ local function Build()
   P.title = P:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge"); P.title:SetPoint("TOPLEFT", 16, -14)
   local close = CreateFrame("Button", nil, P, "UIPanelCloseButton"); close:SetPoint("TOPRIGHT", -4, -4)
   close:SetScript("OnClick", function() P:Hide() end)
+  -- BiS: just this slot's BiS picks for the character's level (WoW Forever lists); click again for all gear
+  P.bisBtn = CreateFrame("Button", nil, P, "UIPanelButtonTemplate"); P.bisBtn:SetSize(46, 20)
+  P.bisBtn:SetPoint("LEFT", P.title, "RIGHT", 10, 0); P.bisBtn:Hide()
+  P.bisBtn:SetScript("OnClick", function() local o = Opts(); o.bis = not o.bis; T.Render() end)
+  P.bisBtn:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:AddLine(Opts().bis and "Show all gear for this slot" or "Show only the BiS list for this slot, at your level")
+    GameTooltip:Show()
+  end)
+  P.bisBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
   -- sources
   P.checks = {}
   for i, d in ipairs(SRC) do
@@ -666,11 +676,15 @@ function T.Star(r, id)
 end
 
 -- the picker's controls for choosing gear, and the wishlist's button, each shown in their own mode
-local function ShowControls(wish)
+local function ShowControls(wish, bis)
+  local bisOK = NS.Bis and NS.Bis.Available and NS.Bis.Available()
+  P.bisBtn:SetShown(not wish and bisOK)
+  P.bisBtn:SetText(bis and "|cff40ff40BiS|r" or "BiS")
+  if bis then wish = true end
   for _, cb in pairs(P.checks) do cb:SetShown(not wish) end
   P.all:SetShown(not wish); P.lt:SetShown(not wish); P.dash:SetShown(not wish); P.lo:SetShown(not wish); P.hi:SetShown(not wish); P.go:SetShown(not wish)
-  P.search:SetShown(not wish); P.lootBtn:SetShown(wish); P.shareBtn:SetShown(wish and _G.PintsLoot ~= nil and _G.PintsLoot.AskShare ~= nil)
-  for _, b in ipairs(P.views or {}) do b:SetShown(wish) end
+  P.search:SetShown(not wish); P.lootBtn:SetShown(wish and not bis); P.shareBtn:SetShown(wish and not bis and _G.PintsLoot ~= nil and _G.PintsLoot.AskShare ~= nil)
+  for _, b in ipairs(P.views or {}) do b:SetShown(wish and not bis) end
 end
 
 -- wishlist mode: everything on the character's wishlist (kept by Pint's Loot), any slot; click to try it on
@@ -777,9 +791,77 @@ local function RenderWish()
   end
 end
 
+-- BiS mode: the slot's BiS list at the character's level, in rank order; click to try one on
+local function RenderBis()
+  local c, slot = P.c, P.slot
+  ShowControls(false, true)
+  P.title:SetText(("%s  |cffa0a0a0- %s|r"):format(SLOT_NAME[slot] or "?", c.name or ""))
+  local list, spec, lvl, floor, nextCap = NS.Bis.SlotList(c, slot)
+  list = list or {}
+  local S = _G.CraftUpgradesScore
+  local role = S and NS.Bis.SpecRole and spec and NS.Bis.SpecRole(spec:lower():gsub(" ", "-"))
+  local ctx = S and { role = role or (S.RoleFor and S.RoleFor(c)), class = c.classFile, gear = function(s) return c.gear and c.gear[s] end }
+  local current, eq = T.Link(c, slot), c.gear and c.gear[slot]
+  local eqID = eq and tonumber(eq:match("item:(%d+)"))
+  -- first row: keep / put back what's equipped
+  local r = Row(1)
+  Place(r, 0, ROW_H - 2); Plain(r, 1)
+  r.keep, r.e, r.slot = true, nil, nil
+  local eqName, eqQ, eqIcon
+  if eq then local _; eqName, _, eqQ, _, _, _, _, _, _, eqIcon = GetItemInfo(eq) end
+  r.icon:SetTexture(eqIcon or "Interface\\PaperDoll\\UI-Backpack-EmptySlot")
+  r.name:SetText(eq and ((ITEM_QUALITY_COLORS[eqQ or 1] and ITEM_QUALITY_COLORS[eqQ or 1].hex or "|cffffffff") .. (eqName or "?") .. "|r") or "|cff808080Nothing equipped|r")
+  r.src:SetText("|cffa0a0a0Currently equipped - click to put it back|r")
+  r.pct:SetText(""); r.lvl:SetText(""); r.star:Hide()
+  r.sel:SetShown(current == eq)
+  r:Show()
+  local i, pending, two = 1, 0, false
+  for _, b in ipairs(list) do
+    local name, link, q, _, req, _, _, _, _, icon = GetItemInfo(b.id)
+    if not name then pending = pending + 1; if C_Item and C_Item.RequestLoadItemDataByID then C_Item.RequestLoadItemDataByID(b.id) end end
+    i = i + 1
+    r = Row(i)
+    Place(r, (i - 1) * ROW_H, ROW_H - 2); Plain(r, i)
+    local worn = b.id == eqID
+    if worn then r.bg:SetColorTexture(0.75, 1, 0.75, 0.22) end
+    local e = { id = b.id, link = link, src = b.src }
+    r.keep, r.e, r.slot = false, e, nil
+    r.icon:SetTexture(icon or (GetItemIcon and GetItemIcon(b.id)) or "Interface\\Icons\\INV_Misc_QuestionMark")
+    local col = q and ITEM_QUALITY_COLORS and ITEM_QUALITY_COLORS[q]
+    local tag = (b.kind == "twohand") and "  |cff909090Two-Hand|r" or ""
+    if b.kind == "twohand" then two = true end
+    r.name:SetText((b.rank == 1 and "|cffffd100#1|r " or ("|cffc0c0c0#" .. b.rank .. "|r ")) .. ((col and col.hex) or "|cffffffff") ..
+      (name or b.name or ("item " .. b.id)) .. "|r" .. tag .. (worn and "  |cff40ff40worn|r" or ""))
+    r.src:SetText("|cffd4a24c" .. (b.src ~= "" and b.src or "Source unknown") .. "|r" ..
+      ((floor and b.cap > floor) and ("  |cff40ff40(level " .. b.cap .. " list)|r") or ""))
+    r.pct:SetText("")
+    if ctx and S.UpgradeVs and link and not worn then
+      local ok, pct, empty = pcall(S.UpgradeVs, link, ctx)
+      if ok and empty then r.pct:SetText("|cff40ff40new slot|r")
+      elseif ok and pct then r.pct:SetText((pct >= 0.5 and "|cff40ff40+" or (pct <= -0.5 and "|cffff4040" or "|cffa0a0a0")) .. math.floor(pct + 0.5) .. "%|r") end
+    end
+    req = (req and req > 0) and req or 0
+    r.lvl:SetText(req > lvl and ("|cff66ccfflvl " .. req .. "|r") or ("|cffa0a0a0lvl " .. req .. "|r"))
+    r.sel:SetShown(current ~= nil and link ~= nil and current == link and not worn)
+    T.Star(r, b.id)
+    r:Show()
+  end
+  for k = i + 1, #P.rows do P.rows[k]:Hide() end
+  P.list:SetHeight(math.max(1, i * ROW_H))
+  if not spec then
+    P.status:SetText("|cffff8040No BiS list for this character's class.|r")
+  elseif #list == 0 then
+    P.status:SetText(("Nothing on the %s BiS list for this slot at level %d."):format(spec, lvl))
+  else
+    P.status:SetText(("%s BiS at level %d: %d pick%s%s  |cff909090wowtbc.gg|r%s"):format(spec, lvl, #list, #list == 1 and "" or "s",
+      two and " (one-hand and two-hand)" or "", pending > 0 and ("  |cffffd100- loading %d...|r"):format(pending) or ""))
+  end
+end
+
 function T.Render()
   if not P or not P:IsShown() or not P.c then return end
   if P.mode == "wish" then return RenderWish() end
+  if Opts().bis and NS.Bis and NS.Bis.Available and NS.Bis.Available() and NS.Bis.SlotList then return RenderBis() end
   ShowControls(false)
   local c, slot, o = P.c, P.slot, Opts()
   local lvl = c.level or 1
