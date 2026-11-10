@@ -1,5 +1,10 @@
 Pint's Alts - Changelog
 
+v1.6.5
+- WoW Forever: your bank is saved again. It was being read while you were away from the banker (or before its tabs
+  had arrived), when the game says every tab is empty - so the saved bank came out empty. It's now read only at the
+  banker, once the tabs are there. Visit your banker once on each character to save it.
+
 v1.6.4
 - BiS: upgrade % is worked out for the list's spec (a Restoration list scores healing), not a guess from the talents.
 - WoW Forever: your talent tree is read (with Pint's Tips), so the BiS list starts on the right spec.

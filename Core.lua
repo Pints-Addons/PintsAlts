@@ -323,8 +323,12 @@ local function ScanBags()
   rec.items.bags = items
 end
 
-local function ScanBank()
-  rec.bank, rec.items = {}, rec.items or {}
+local bankTries = 0
+local ScanBank
+function ScanBank()
+  -- only while you're at the bank: away from it the game reports every bank tab as empty (size 0), and that used to
+  -- overwrite the bank you'd saved
+  if not L.bankOpen then return end
   local items = {}
   local bags = { BANK_CONTAINER or -1 }
   for b = (NUM_BAG_SLOTS or 4) + 1, (NUM_BAG_SLOTS or 4) + (NUM_BANKBAGSLOTS or 6) do bags[#bags + 1] = b end
@@ -334,13 +338,32 @@ local function ScanBank()
     bags = {}
     for t = 1, 9 do local id = BI["CharacterBankTab_" .. t]; if id then bags[#bags + 1] = id end end
   end
-  rec.bankSlots = {}
+  local bank, bankSlots, total = {}, {}, 0
   for i, bag in ipairs(bags) do
     local size, free, slots = CountContainer(bag, items)
-    rec.bank[i] = { size, free }
+    bank[i] = { size, free }
+    total = total + (size or 0)
     -- (id: which container it was, so Pint's Bags puts each one in the right place)
-    rec.bankSlots[i] = { id = bag, size = size, bag = BagItemLink(bag), slots = slots }
+    bankSlots[i] = { id = bag, size = size, bag = BagItemLink(bag), slots = slots }
   end
+  -- WoW Forever: the tabs can take a moment to arrive after the banker opens. All empty but you own tabs (or had a
+  -- bank saved)? Look again shortly instead of saving an empty bank.
+  if total == 0 then
+    local owned = 0
+    if C_Bank and C_Bank.FetchNumPurchasedBankTabs then
+      local ok, n = pcall(C_Bank.FetchNumPurchasedBankTabs, (Enum and Enum.BankType and Enum.BankType.Character) or 0)
+      owned = ok and n or 0
+    end
+    local had = false
+    for _, b in ipairs(rec.bankSlots or {}) do if (b.size or 0) > 0 then had = true end end
+    if (owned > 0 or had) and bankTries < 8 then
+      bankTries = bankTries + 1
+      C_Timer.After(1, function() pcall(ScanBank); if L.OnChanged then L.OnChanged() end end)
+      return
+    end
+  end
+  bankTries = 0
+  rec.bank, rec.bankSlots, rec.items = bank, bankSlots, rec.items or {}
   rec.items.bank = items
   rec.bankSeen = now()
 end
@@ -666,8 +689,10 @@ ev:SetScript("OnEvent", function(_, event, arg1, arg2)
       pcall(ev.RegisterEvent, ev, e)   -- events this game version lacks are skipped
     end
     if GetNumGuildBankTabs then
-      for _, e in ipairs({ "GUILDBANKFRAME_OPENED", "GUILDBANKBAGSLOTS_CHANGED", "PLAYER_INTERACTION_MANAGER_FRAME_SHOW" }) do pcall(ev.RegisterEvent, ev, e) end
+      for _, e in ipairs({ "GUILDBANKFRAME_OPENED", "GUILDBANKBAGSLOTS_CHANGED" }) do pcall(ev.RegisterEvent, ev, e) end
     end
+    -- (the modern client, WoW Forever, says "you're at the banker / guild bank" this way)
+    for _, e in ipairs({ "PLAYER_INTERACTION_MANAGER_FRAME_SHOW", "PLAYER_INTERACTION_MANAGER_FRAME_HIDE" }) do pcall(ev.RegisterEvent, ev, e) end
 
   elseif not rec then
     return
@@ -677,7 +702,12 @@ ev:SetScript("OnEvent", function(_, event, arg1, arg2)
     -- don't rescan here: at logout the client already reports 0 gold, 0 XP and "not resting",
     -- which used to overwrite the good values. Everything is kept current while playing instead.
     rec.lastOnline = now()
-  elseif event == "PLAYER_INTERACTION_MANAGER_FRAME_SHOW" and arg1 ~= ((Enum and Enum.PlayerInteractionType and Enum.PlayerInteractionType.GuildBanker) or 10) then
+  elseif (event == "PLAYER_INTERACTION_MANAGER_FRAME_SHOW" or event == "PLAYER_INTERACTION_MANAGER_FRAME_HIDE") and arg1 == ((Enum and Enum.PlayerInteractionType and Enum.PlayerInteractionType.Banker) or 8) then
+    L.bankOpen = (event == "PLAYER_INTERACTION_MANAGER_FRAME_SHOW")
+    if L.bankOpen then bankTries = 0; Soon("bank", ScanBank, 1) end
+  elseif event == "PLAYER_INTERACTION_MANAGER_FRAME_HIDE" then
+    return
+  elseif event == "PLAYER_INTERACTION_MANAGER_FRAME_SHOW" and (not GetNumGuildBankTabs or arg1 ~= ((Enum and Enum.PlayerInteractionType and Enum.PlayerInteractionType.GuildBanker) or 10)) then
     return
   elseif event == "GUILDBANKFRAME_OPENED" or event == "GUILDBANKBAGSLOTS_CHANGED" or event == "PLAYER_INTERACTION_MANAGER_FRAME_SHOW" then
     if event ~= "GUILDBANKBAGSLOTS_CHANGED" and QueryGuildBankTab then
@@ -700,10 +730,10 @@ ev:SetScript("OnEvent", function(_, event, arg1, arg2)
     Soon("bags", ScanBags)
     if L.bankOpen then Soon("bank", ScanBank) end
   elseif event == "BANKFRAME_OPENED" then
-    L.bankOpen = true
-    Soon("bank", ScanBank)
+    L.bankOpen = true; bankTries = 0
+    Soon("bank", ScanBank, 1)
   elseif event == "PLAYERBANKSLOTS_CHANGED" or event == "PLAYERBANKBAGSLOTS_CHANGED" then
-    Soon("bank", ScanBank)
+    if L.bankOpen then Soon("bank", ScanBank) end
   elseif event == "MAIL_INBOX_UPDATE" then
     Soon("mail", ScanMail)
   elseif event == "AUCTION_HOUSE_SHOW" or event == "AUCTION_OWNED_LIST_UPDATE" or event == "AUCTION_BIDDER_LIST_UPDATE" then
