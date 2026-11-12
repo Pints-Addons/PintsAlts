@@ -766,9 +766,9 @@ local function FillSkills(c)
           hint:SetScript("OnMouseUp", function(self) if self.place and L.PlaceArrow(self.place) then print("|cffd4a017Pint's Alts|r: arrow set.") end end)
           hint:SetScript("OnEnter", function(self)
             if type(self.place) ~= "table" then return end
-            GameTooltip:SetOwner(self, "ANCHOR_CURSOR"); GameTooltip:AddLine(self.place.who, 1, 0.82, 0)
+            GameTooltip:SetOwner(self, "ANCHOR_CURSOR"); GameTooltip:AddLine(self.place.who or "Trainers", 1, 0.82, 0)
             GameTooltip:AddLine(L.PlaceText(self.place), 1, 1, 1, true)
-            GameTooltip:AddLine("Click: point the Quest Book arrow there", 0.6, 0.8, 1); GameTooltip:Show()
+            GameTooltip:AddLine(self.place.list and "Click: point the Quest Book arrow at the nearest one" or "Click: point the Quest Book arrow there", 0.6, 0.8, 1); GameTooltip:Show()
           end)
           hint:SetScript("OnLeave", function() GameTooltip:Hide() end)
         end

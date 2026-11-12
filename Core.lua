@@ -191,17 +191,38 @@ local WHERE = {
                Alliance = { what = "Book \"Expert First Aid - Under Wraps\"", who = "Deneb Walker", town = "Stromgarde Keep", cost = G, cont = 0, wx = -1545.4, wy = -1837.4 } },
     Artisan = { Horde = { what = "Quest \"Triage\"", who = "Doctor Gregory Victor", town = "Hammerfall", cont = 0, wx = -1018.8, wy = -3509.5, note = "level 35" },
                 Alliance = { what = "Quest \"Triage\"", who = "Doctor Gustaf VanHowzen", town = "Theramore", cont = 1, wx = -3747.3, wy = -4532.2, note = "level 35" } } },
-  -- primary professions: Journeyman and Expert from city trainers; Artisan from a few masters
-  Alchemy = { Artisan = { Horde = { who = "Rogvar", town = "Stonard", cont = 0, wx = -10474.8, wy = -3336.0 },
-                          Alliance = { who = "Ghak Healtouch", town = "Thelsamar", cont = 0, wx = -5395.9, wy = -3016.2 } } },
-  Blacksmithing = { Artisan = { who = "Brikk Keencraft", town = "Booty Bay", cont = 0, wx = -14383.0, wy = 370.8 } },
-  Enchanting = { Artisan = { who = "Annora", town = "inside Uldaman, Badlands" } },
-  Engineering = { Artisan = { who = "Buzzek Bracketswing", town = "Gadgetzan", cont = 1, wx = -7150.3, wy = -3830.2 } },
-  Leatherworking = { Artisan = { Horde = { who = "Hahrana Ironhide", town = "Camp Mojache", cont = 1, wx = -4364.5, wy = 273.5 },
-                                 Alliance = { who = "Drakk Stonehand", town = "Aerie Peak", cont = 0, wx = 350.4, wy = -2090.4 } } },
-  Tailoring = { Artisan = { Horde = { who = "Daryl Stack", town = "Tarren Mill", cont = 0, wx = -43.4, wy = -973.3 },
-                            Alliance = { who = "Timothy Worthington", town = "Theramore", cont = 1, wx = -3846.7, wy = -4449.2 } } },
-  Mining = { Artisan = { who = "Pikkle", town = "Tanaris", cont = 1, wx = -7167.7, wy = -3743.1 } },
+  -- primary professions: Journeyman from any city trainer; Expert and Artisan only from these trainers (Classic world
+  -- database, via Pint's Recipe Sources). Mining is taught in full by every city mining trainer.
+  Alchemy = {
+    Expert = { Horde = { list = { { who = "Doctor Herbert Halsey", town = "the Apothecarium, Undercity", cont = 0, wx = 1408.5, wy = 414.9 }, { who = "Rogvar", town = "Stonard", cont = 0, wx = -10474.8, wy = -3336.0 } } },
+                 Alliance = { list = { { who = "Ainethil", town = "Darnassus", cont = 1, wx = 10068.8, wy = 2357.6 }, { who = "Kylanna Windwhisper", town = "Feathermoon Stronghold", cont = 1, wx = -4395.1, wy = 3174.2 } } } },
+    Artisan = { Horde = { list = { { who = "Rogvar", town = "Stonard", cont = 0, wx = -10474.8, wy = -3336.0 } } },
+                 Alliance = { list = { { who = "Kylanna Windwhisper", town = "Feathermoon Stronghold", cont = 1, wx = -4395.1, wy = 3174.2 } } } } },
+  Blacksmithing = {
+    Expert = { Horde = { list = { { who = "Saru Steelfury", town = "Orgrimmar", cont = 1, wx = 2059.0, wy = -4835.6 }, { who = "Brikk Keencraft", town = "Booty Bay", cont = 0, wx = -14383.0, wy = 370.8 } } },
+                 Alliance = { list = { { who = "Bengus Deepforge", town = "Ironforge", cont = 0, wx = -4788.0, wy = -1129.0 }, { who = "Brikk Keencraft", town = "Booty Bay", cont = 0, wx = -14383.0, wy = 370.8 } } } },
+    Artisan = { Horde = { list = { { who = "Brikk Keencraft", town = "Booty Bay", cont = 0, wx = -14383.0, wy = 370.8 } } },
+                 Alliance = { list = { { who = "Brikk Keencraft", town = "Booty Bay", cont = 0, wx = -14383.0, wy = 370.8 } } } } },
+  Enchanting = {
+    Expert = { Horde = { list = { { who = "Hgarth", town = "Sun Rock Retreat", cont = 1, wx = 1054.6, wy = 844.3 }, { who = "Annora", town = "inside Uldaman, Badlands", note = "inside the dungeon" } } },
+                 Alliance = { list = { { who = "Kitta Firewind", town = "Tower of Azora, Elwynn Forest", cont = 0, wx = -9576.3, wy = -718.1 }, { who = "Annora", town = "inside Uldaman, Badlands", note = "inside the dungeon" } } } },
+    Artisan = { Horde = { list = { { who = "Annora", town = "inside Uldaman, Badlands", note = "inside the dungeon" } } },
+                 Alliance = { list = { { who = "Annora", town = "inside Uldaman, Badlands", note = "inside the dungeon" } } } } },
+  Engineering = {
+    Expert = { Horde = { list = { { who = "Roxxik", town = "Orgrimmar", cont = 1, wx = 2038.4, wy = -4749.0 }, { who = "Buzzek Bracketswing", town = "Gadgetzan", cont = 1, wx = -7150.3, wy = -3830.2 } } },
+                 Alliance = { list = { { who = "Springspindle Fizzlegear", town = "Ironforge", cont = 0, wx = -4799.0, wy = -1254.8 }, { who = "Buzzek Bracketswing", town = "Gadgetzan", cont = 1, wx = -7150.3, wy = -3830.2 } } } },
+    Artisan = { Horde = { list = { { who = "Buzzek Bracketswing", town = "Gadgetzan", cont = 1, wx = -7150.3, wy = -3830.2 } } },
+                 Alliance = { list = { { who = "Buzzek Bracketswing", town = "Gadgetzan", cont = 1, wx = -7150.3, wy = -3830.2 } } } } },
+  Leatherworking = {
+    Expert = { Horde = { list = { { who = "Una", town = "Thunder Bluff", cont = 1, wx = -1146.2, wy = 83.5 } } },
+                 Alliance = { list = { { who = "Telonis", town = "Darnassus", cont = 1, wx = 10086.3, wy = 2256.5 }, { who = "Caryssia Moonhunter", town = "Feathermoon Stronghold", cont = 1, wx = -4523.6, wy = -772.9 } } } },
+    Artisan = { Horde = { list = { { who = "Hahrana Ironhide", town = "Camp Mojache", cont = 1, wx = -4364.5, wy = 273.5 } } },
+                 Alliance = { list = { { who = "Drakk Stonehand", town = "Aerie Peak", cont = 0, wx = 350.4, wy = -2090.4 }, { who = "Caryssia Moonhunter", town = "Feathermoon Stronghold", cont = 1, wx = -4523.6, wy = -772.9 } } } } },
+  Tailoring = {
+    Expert = { Horde = { list = { { who = "Daryl Stack", town = "Tarren Mill", cont = 0, wx = -43.4, wy = -973.3 }, { who = "Josef Gregorian", town = "Magic Quarter, Undercity", cont = 0, wx = 1681.5, wy = 194.4 }, { who = "Meilosh", town = "Timbermaw Hold, Felwood", cont = 1, wx = 7025.6, wy = -2135.7, note = "needs Friendly with Timbermaw Hold" } } },
+                 Alliance = { list = { { who = "Georgio Bolero", town = "Mage Quarter, Stormwind", cont = 0, wx = -8938.1, wy = 800.7 }, { who = "Timothy Worthington", town = "Theramore", cont = 1, wx = -3846.7, wy = -4449.2 }, { who = "Meilosh", town = "Timbermaw Hold, Felwood", cont = 1, wx = 7025.6, wy = -2135.7, note = "needs Friendly with Timbermaw Hold" } } } },
+    Artisan = { Horde = { list = { { who = "Daryl Stack", town = "Tarren Mill", cont = 0, wx = -43.4, wy = -973.3 }, { who = "Meilosh", town = "Timbermaw Hold, Felwood", cont = 1, wx = 7025.6, wy = -2135.7, note = "needs Friendly with Timbermaw Hold" } } },
+                 Alliance = { list = { { who = "Timothy Worthington", town = "Theramore", cont = 1, wx = -3846.7, wy = -4449.2 }, { who = "Meilosh", town = "Timbermaw Hold, Felwood", cont = 1, wx = 7025.6, wy = -2135.7, note = "needs Friendly with Timbermaw Hold" } } } } },
 }
 -- a place's world position (asks Pint's Quest Book to turn a zone map position into one)
 local function PlaceWorld(pl)
@@ -212,6 +233,15 @@ end
 -- "Old Man Heming, Booty Bay (Stranglethorn Vale 27.4, 77.2)  1g"
 function L.PlaceText(pl, short)
   if type(pl) == "string" then return pl end
+  -- several trainers: "Daryl Stack (Tarren Mill) or Josef Gregorian (Magic Quarter, Undercity)"
+  if pl.list then
+    local parts = {}
+    for _, one in ipairs(pl.list) do
+      if short then parts[#parts + 1] = one.who .. " (" .. one.town .. ")"
+      else parts[#parts + 1] = L.PlaceText(one) end
+    end
+    return table.concat(parts, short and "  or  " or "\n")
+  end
   local zone, x, y
   local QB = _G.PintsQuestBook
   if pl.cont and QB and QB.Locate then
@@ -231,6 +261,13 @@ end
 -- point Pint's Quest Book's arrow at a place (true when it could)
 function L.PlaceArrow(pl)
   if type(pl) ~= "table" then return false end
+  if pl.list then
+    -- the first one on the continent you're on (else the first)
+    local here = select(4, UnitPosition and UnitPosition("player"))
+    local pick = pl.list[1]
+    for _, one in ipairs(pl.list) do if one.cont and one.cont == here then pick = one; break end end
+    return L.PlaceArrow(pick)
+  end
   local QB = _G.PintsQuestBook
   local c, x, y = PlaceWorld(pl)
   if c and QB and QB.ArrowTo then QB.ArrowTo(c, x, y, pl.who, pl.what or pl.town); return true end

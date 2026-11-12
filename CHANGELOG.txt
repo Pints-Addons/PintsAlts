@@ -1,5 +1,13 @@
 Pint's Alts - Changelog
 
+v1.6.6
+- Skills: "Learn Expert" and "Learn Artisan" name the trainers who really teach it, and where - e.g. Expert Tailoring:
+  Daryl Stack (Tarren Mill), Josef Gregorian (Undercity) or Meilosh (Timbermaw Hold) - instead of "any trainer in a
+  capital city" (most city trainers stop at Journeyman). Hover for each one's map position; click to point the Quest
+  Book arrow at the nearest.
+- BiS rank in item tooltips is bright orange, and shows on the game's own character sheet and bags too (it was missing
+  outside Pint's Alts' own window).
+
 v1.6.5
 - BiS: item tooltips show where the item ranks on your BiS list ("BiS #7 of 9 - Head"), for the character picked
   in Pint's Alts while it's open, else the one you're playing. It follows the spec and level the BiS tab shows.

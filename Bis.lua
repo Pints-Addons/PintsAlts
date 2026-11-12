@@ -403,7 +403,8 @@ local function Whose()
   local c = NS.SelectedChar and NS.SelectedChar()
   if c then return c end
   local L = NS.L
-  local r, n = L and L.Me and L.Me()
+  local r, n
+  if L and L.Me then r, n = L.Me() end            -- (not "L and L.Me()": that keeps only the realm)
   local rec = r and n and PintsLedgerDB and PintsLedgerDB.chars and PintsLedgerDB.chars[r] and PintsLedgerDB.chars[r][n]
   if rec then rec.name, rec.realm = rec.name or n, rec.realm or r end
   return rec
@@ -411,32 +412,39 @@ end
 local function Secret(v) return type(issecretvalue) == "function" and issecretvalue(v) end
 local function TipLine(tt, id)
   if not id or Secret(id) or not B.Available() then return end
+  if tt.pintsBis == id then return end            -- (two hooks can both fire for one tooltip: one line only)
   local c = Whose()
   if not c then return end
   local ok, rank, slot, spec, of, lvl = pcall(B.RankOf, c, id)
   if not (ok and rank) then return end
-  tt:AddLine(("|cffffd100BiS #%d|r of %d - %s  |cff909090(%s, level %d - %s)|r"):format(rank, of, slot, spec, lvl, c.name or "?"),
-    rank == 1 and 1 or 0.85, rank == 1 and 0.82 or 0.85, rank == 1 and 0 or 0.85)
+  tt.pintsBis = id
+  -- bright orange, so it stands out among the other add-ons' lines
+  tt:AddLine(("|cffff8000BiS #%d of %d - %s|r  |cffffb060(%s, level %d - %s)|r"):format(rank, of, slot, spec, lvl, c.name or "?"))
   tt:Show()
 end
 local TIPS = { GameTooltip = true, ItemRefTooltip = true, ShoppingTooltip1 = true, ShoppingTooltip2 = true }
 local function Allowed(tt) local n = tt and tt.GetName and tt:GetName(); return n and TIPS[n] end
+local function LinkID(tt)
+  if not tt.GetItem then return nil end
+  local ok, _, link = pcall(tt.GetItem, tt)
+  return ok and link and not Secret(link) and tonumber(link:match("item:(%d+)")) or nil
+end
+-- both ways in: the newer tooltip data hook, and the older OnTooltipSetItem (the character sheet and bags on
+-- some clients only use this one)
 if TooltipDataProcessor and TooltipDataProcessor.AddTooltipPostCall and Enum and Enum.TooltipDataType and Enum.TooltipDataType.Item then
   TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Item, function(tt, data)
     if not Allowed(tt) then return end
     local id = data and data.id
-    if not id and tt.GetItem then local _, link = tt:GetItem(); id = link and not Secret(link) and tonumber(link:match("item:(%d+)")) end
+    if not id or Secret(id) then id = LinkID(tt) end
     pcall(TipLine, tt, id)
   end)
-else
-  for n in pairs(TIPS) do
-    local tt = _G[n]
-    if tt and tt.HookScript then
-      pcall(tt.HookScript, tt, "OnTooltipSetItem", function(self)
-        local _, link = self:GetItem()
-        pcall(TipLine, self, link and not Secret(link) and tonumber(link:match("item:(%d+)")))
-      end)
-    end
+end
+for n in pairs(TIPS) do
+  local tt = _G[n]
+  if tt and tt.HookScript then
+    pcall(tt.HookScript, tt, "OnTooltipSetItem", function(self) pcall(TipLine, self, LinkID(self)) end)
+    pcall(tt.HookScript, tt, "OnTooltipCleared", function(self) self.pintsBis = nil end)
+    pcall(tt.HookScript, tt, "OnHide", function(self) self.pintsBis = nil end)
   end
 end
 
