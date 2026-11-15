@@ -194,33 +194,33 @@ local WHERE = {
   -- primary professions: Journeyman from any city trainer; Expert and Artisan only from these trainers (Classic world
   -- database, via Pint's Recipe Sources). Mining is taught in full by every city mining trainer.
   Alchemy = {
-    Expert = { Horde = { list = { { who = "Doctor Herbert Halsey", town = "the Apothecarium, Undercity", cont = 0, wx = 1408.5, wy = 414.9 }, { who = "Rogvar", town = "Stonard", cont = 0, wx = -10474.8, wy = -3336.0 } } },
-                 Alliance = { list = { { who = "Ainethil", town = "Darnassus", cont = 1, wx = 10068.8, wy = 2357.6 }, { who = "Kylanna Windwhisper", town = "Feathermoon Stronghold", cont = 1, wx = -4395.1, wy = 3174.2 } } } },
+    Expert = { Horde = { list = { { who = "Doctor Herbert Halsey", town = "the Apothecarium, Undercity", cont = 0, wx = 1408.5, wy = 414.9 } } },
+                 Alliance = { list = { { who = "Ainethil", town = "Darnassus", cont = 1, wx = 10068.8, wy = 2357.6 } } } },
     Artisan = { Horde = { list = { { who = "Rogvar", town = "Stonard", cont = 0, wx = -10474.8, wy = -3336.0 } } },
                  Alliance = { list = { { who = "Kylanna Windwhisper", town = "Feathermoon Stronghold", cont = 1, wx = -4395.1, wy = 3174.2 } } } } },
   Blacksmithing = {
-    Expert = { Horde = { list = { { who = "Saru Steelfury", town = "Orgrimmar", cont = 1, wx = 2059.0, wy = -4835.6 }, { who = "Brikk Keencraft", town = "Booty Bay", cont = 0, wx = -14383.0, wy = 370.8 } } },
-                 Alliance = { list = { { who = "Bengus Deepforge", town = "Ironforge", cont = 0, wx = -4788.0, wy = -1129.0 }, { who = "Brikk Keencraft", town = "Booty Bay", cont = 0, wx = -14383.0, wy = 370.8 } } } },
+    Expert = { Horde = { list = { { who = "Saru Steelfury", town = "Orgrimmar", cont = 1, wx = 2059.0, wy = -4835.6 } } },
+                 Alliance = { list = { { who = "Bengus Deepforge", town = "Ironforge", cont = 0, wx = -4788.0, wy = -1129.0 } } } },
     Artisan = { Horde = { list = { { who = "Brikk Keencraft", town = "Booty Bay", cont = 0, wx = -14383.0, wy = 370.8 } } },
                  Alliance = { list = { { who = "Brikk Keencraft", town = "Booty Bay", cont = 0, wx = -14383.0, wy = 370.8 } } } } },
   Enchanting = {
-    Expert = { Horde = { list = { { who = "Hgarth", town = "Sun Rock Retreat", cont = 1, wx = 1054.6, wy = 844.3 }, { who = "Annora", town = "inside Uldaman, Badlands", note = "inside the dungeon" } } },
-                 Alliance = { list = { { who = "Kitta Firewind", town = "Tower of Azora, Elwynn Forest", cont = 0, wx = -9576.3, wy = -718.1 }, { who = "Annora", town = "inside Uldaman, Badlands", note = "inside the dungeon" } } } },
+    Expert = { Horde = { list = { { who = "Hgarth", town = "Sun Rock Retreat, Stonetalon Mountains", cont = 1, wx = 1054.6, wy = 844.3 } } },
+                 Alliance = { list = { { who = "Kitta Firewind", town = "Tower of Azora, Elwynn Forest", cont = 0, wx = -9576.3, wy = -718.1 } } } },
     Artisan = { Horde = { list = { { who = "Annora", town = "inside Uldaman, Badlands", note = "inside the dungeon" } } },
                  Alliance = { list = { { who = "Annora", town = "inside Uldaman, Badlands", note = "inside the dungeon" } } } } },
   Engineering = {
-    Expert = { Horde = { list = { { who = "Roxxik", town = "Orgrimmar", cont = 1, wx = 2038.4, wy = -4749.0 }, { who = "Buzzek Bracketswing", town = "Gadgetzan", cont = 1, wx = -7150.3, wy = -3830.2 } } },
-                 Alliance = { list = { { who = "Springspindle Fizzlegear", town = "Ironforge", cont = 0, wx = -4799.0, wy = -1254.8 }, { who = "Buzzek Bracketswing", town = "Gadgetzan", cont = 1, wx = -7150.3, wy = -3830.2 } } } },
+    Expert = { Horde = { list = { { who = "Roxxik", town = "Orgrimmar", cont = 1, wx = 2038.4, wy = -4749.0 } } },
+                 Alliance = { list = { { who = "Springspindle Fizzlegear", town = "Ironforge", cont = 0, wx = -4799.0, wy = -1254.8 } } } },
     Artisan = { Horde = { list = { { who = "Buzzek Bracketswing", town = "Gadgetzan", cont = 1, wx = -7150.3, wy = -3830.2 } } },
                  Alliance = { list = { { who = "Buzzek Bracketswing", town = "Gadgetzan", cont = 1, wx = -7150.3, wy = -3830.2 } } } } },
   Leatherworking = {
     Expert = { Horde = { list = { { who = "Una", town = "Thunder Bluff", cont = 1, wx = -1146.2, wy = 83.5 } } },
-                 Alliance = { list = { { who = "Telonis", town = "Darnassus", cont = 1, wx = 10086.3, wy = 2256.5 }, { who = "Caryssia Moonhunter", town = "Feathermoon Stronghold", cont = 1, wx = -4523.6, wy = -772.9 } } } },
+                 Alliance = { list = { { who = "Telonis", town = "Darnassus", cont = 1, wx = 10086.3, wy = 2256.5 } } } },
     Artisan = { Horde = { list = { { who = "Hahrana Ironhide", town = "Camp Mojache", cont = 1, wx = -4364.5, wy = 273.5 } } },
                  Alliance = { list = { { who = "Drakk Stonehand", town = "Aerie Peak", cont = 0, wx = 350.4, wy = -2090.4 }, { who = "Caryssia Moonhunter", town = "Feathermoon Stronghold", cont = 1, wx = -4523.6, wy = -772.9 } } } } },
   Tailoring = {
-    Expert = { Horde = { list = { { who = "Daryl Stack", town = "Tarren Mill", cont = 0, wx = -43.4, wy = -973.3 }, { who = "Josef Gregorian", town = "Magic Quarter, Undercity", cont = 0, wx = 1681.5, wy = 194.4 }, { who = "Meilosh", town = "Timbermaw Hold, Felwood", cont = 1, wx = 7025.6, wy = -2135.7, note = "needs Friendly with Timbermaw Hold" } } },
-                 Alliance = { list = { { who = "Georgio Bolero", town = "Mage Quarter, Stormwind", cont = 0, wx = -8938.1, wy = 800.7 }, { who = "Timothy Worthington", town = "Theramore", cont = 1, wx = -3846.7, wy = -4449.2 }, { who = "Meilosh", town = "Timbermaw Hold, Felwood", cont = 1, wx = 7025.6, wy = -2135.7, note = "needs Friendly with Timbermaw Hold" } } } },
+    Expert = { Horde = { list = { { who = "Josef Gregorian", town = "Magic Quarter, Undercity", cont = 0, wx = 1681.5, wy = 194.4 } } },
+                 Alliance = { list = { { who = "Georgio Bolero", town = "Mage Quarter, Stormwind", cont = 0, wx = -8938.1, wy = 800.7 } } } },
     Artisan = { Horde = { list = { { who = "Daryl Stack", town = "Tarren Mill", cont = 0, wx = -43.4, wy = -973.3 }, { who = "Meilosh", town = "Timbermaw Hold, Felwood", cont = 1, wx = 7025.6, wy = -2135.7, note = "needs Friendly with Timbermaw Hold" } } },
                  Alliance = { list = { { who = "Timothy Worthington", town = "Theramore", cont = 1, wx = -3846.7, wy = -4449.2 }, { who = "Meilosh", town = "Timbermaw Hold, Felwood", cont = 1, wx = 7025.6, wy = -2135.7, note = "needs Friendly with Timbermaw Hold" } } } } },
 }

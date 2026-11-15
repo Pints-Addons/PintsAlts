@@ -1,5 +1,11 @@
 Pint's Alts - Changelog
 
+v1.6.7
+- Skills: "Learn Expert" now names only the Expert trainers, and "Learn Artisan" the Artisan ones. The Expert line also
+  listed the Artisan trainer (who can teach Expert too, but is the far-off one - Annora inside Uldaman, Brikk Keencraft
+  in Booty Bay, Buzzek in Gadgetzan, Rogvar, Kylanna, Daryl Stack, Timothy Worthington, Meilosh, Caryssia).
+  Enchanting Expert: Hgarth (Sun Rock Retreat, Stonetalon Mountains) or Kitta Firewind (Elwynn Forest).
+
 v1.6.6
 - Skills: "Learn Expert" and "Learn Artisan" name the trainers who really teach it, and where - e.g. Expert Tailoring:
   Daryl Stack (Tarren Mill), Josef Gregorian (Undercity) or Meilosh (Timbermaw Hold) - instead of "any trainer in a
