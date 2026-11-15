@@ -217,12 +217,12 @@ local WHERE = {
     Expert = { Horde = { list = { { who = "Una", town = "Thunder Bluff", cont = 1, wx = -1146.2, wy = 83.5 } } },
                  Alliance = { list = { { who = "Telonis", town = "Darnassus", cont = 1, wx = 10086.3, wy = 2256.5 } } } },
     Artisan = { Horde = { list = { { who = "Hahrana Ironhide", town = "Camp Mojache", cont = 1, wx = -4364.5, wy = 273.5 } } },
-                 Alliance = { list = { { who = "Drakk Stonehand", town = "Aerie Peak", cont = 0, wx = 350.4, wy = -2090.4 }, { who = "Caryssia Moonhunter", town = "Feathermoon Stronghold", cont = 1, wx = -4523.6, wy = -772.9 } } } } },
+                 Alliance = { list = { { who = "Drakk Stonehand", town = "Aerie Peak", cont = 0, wx = 350.4, wy = -2090.4 , note = "not yet seen on WoW Forever" }, { who = "Caryssia Moonhunter", town = "Feathermoon Stronghold", cont = 1, wx = -4523.6, wy = -772.9 , note = "not yet seen on WoW Forever" } } } } },
   Tailoring = {
     Expert = { Horde = { list = { { who = "Josef Gregorian", town = "Magic Quarter, Undercity", cont = 0, wx = 1681.5, wy = 194.4 } } },
                  Alliance = { list = { { who = "Georgio Bolero", town = "Mage Quarter, Stormwind", cont = 0, wx = -8938.1, wy = 800.7 } } } },
-    Artisan = { Horde = { list = { { who = "Daryl Stack", town = "Tarren Mill", cont = 0, wx = -43.4, wy = -973.3 }, { who = "Meilosh", town = "Timbermaw Hold, Felwood", cont = 1, wx = 7025.6, wy = -2135.7, note = "needs Friendly with Timbermaw Hold" } } },
-                 Alliance = { list = { { who = "Timothy Worthington", town = "Theramore", cont = 1, wx = -3846.7, wy = -4449.2 }, { who = "Meilosh", town = "Timbermaw Hold, Felwood", cont = 1, wx = 7025.6, wy = -2135.7, note = "needs Friendly with Timbermaw Hold" } } } } },
+    Artisan = { Horde = { list = { { who = "Daryl Stack", town = "Tarren Mill", cont = 0, wx = -43.4, wy = -973.3 }, { who = "Meilosh", town = "Timbermaw Hold, Felwood", cont = 1, wx = 7025.6, wy = -2135.7, note = "needs Friendly with Timbermaw Hold - not yet seen on WoW Forever" } } },
+                 Alliance = { list = { { who = "Timothy Worthington", town = "Theramore", cont = 1, wx = -3846.7, wy = -4449.2 }, { who = "Meilosh", town = "Timbermaw Hold, Felwood", cont = 1, wx = 7025.6, wy = -2135.7, note = "needs Friendly with Timbermaw Hold - not yet seen on WoW Forever" } } } } },
 }
 -- a place's world position (asks Pint's Quest Book to turn a zone map position into one)
 local function PlaceWorld(pl)

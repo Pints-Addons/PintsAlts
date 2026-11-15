@@ -1,5 +1,9 @@
 Pint's Alts - Changelog
 
+v1.6.8
+- Profession trainers checked against Wowhead's WoW Forever database: every Expert and Artisan trainer is right.
+  Three that Wowhead hasn't seen on Forever yet are marked so (Drakk Stonehand, Caryssia Moonhunter, Meilosh).
+
 v1.6.7
 - Skills: "Learn Expert" now names only the Expert trainers, and "Learn Artisan" the Artisan ones. The Expert line also
   listed the Artisan trainer (who can teach Expert too, but is the far-off one - Annora inside Uldaman, Brikk Keencraft
