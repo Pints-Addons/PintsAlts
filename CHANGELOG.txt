@@ -1,5 +1,10 @@
 Pint's Alts - Changelog
 
+v1.6.10
+- A character no longer shows up twice - once under its realm and once under a blank one - when the game hasn't
+  named the realm yet at login (seen on WoW Forever). Characters already filed under the blank realm move back to their
+  realm, keeping the newer record.
+
 v1.6.9
 - Ledger, Characters, BiS (WoW Forever only) and Craft Upgrades are now tabs across the top; BiS is no longer a
   sub-tab of Characters.

@@ -700,7 +700,30 @@ ev:SetScript("OnEvent", function(_, event, arg1, arg2)
     PintsLedgerDB.guilds = PintsLedgerDB.guilds or {}
     PintsLedgerDB.currencies = PintsLedgerDB.currencies or {}
   elseif event == "PLAYER_LOGIN" then
-    realm, name = GetRealmName(), (GetUnitName and GetUnitName("player", false) or UnitName("player"))
+    name = (GetUnitName and GetUnitName("player", false) or UnitName("player"))
+    -- the realm's name can come back empty at login (seen on WoW Forever): fall back to the last realm we knew, so the
+    -- character isn't filed a second time under a blank realm
+    local function Ok(r) return type(r) == "string" and r ~= "" and not (type(issecretvalue) == "function" and issecretvalue(r)) end
+    realm = GetRealmName()
+    if not Ok(realm) and GetNormalizedRealmName then realm = GetNormalizedRealmName() end
+    if not Ok(realm) then realm = PintsLedgerDB.lastRealm end
+    if Ok(realm) then
+      PintsLedgerDB.lastRealm = realm
+      -- characters already filed under a blank realm go back to their realm (the newer record wins)
+      for _, bad in ipairs({ "", "?" }) do
+        local lost = PintsLedgerDB.chars[bad]
+        if lost then
+          PintsLedgerDB.chars[realm] = PintsLedgerDB.chars[realm] or {}
+          for n, c in pairs(lost) do
+            local have = PintsLedgerDB.chars[realm][n]
+            if not have or (c.lastOnline or 0) >= (have.lastOnline or 0) then c.realm = realm; PintsLedgerDB.chars[realm][n] = c end
+          end
+          PintsLedgerDB.chars[bad] = nil
+        end
+      end
+    else
+      realm = "?"
+    end
     me = realm .. "." .. name
     PintsLedgerDB.chars[realm] = PintsLedgerDB.chars[realm] or {}
     -- WoW Forever names have a second name ("Pint Waterboy"). Characters saved before that was known went in under the
