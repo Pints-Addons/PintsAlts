@@ -1,5 +1,18 @@
 Pint's Alts - Changelog
 
+v1.6.9
+- Ledger, Characters, BiS (WoW Forever only) and Craft Upgrades are now tabs across the top; BiS is no longer a
+  sub-tab of Characters.
+- BiS: click a slot heading to fold it away; right-click folds or opens every slot.
+- BiS: 516 items that said "Source unknown" now show where they come from (Wowhead's WoW Forever database): the
+  dungeon set vendors, PvP vendors, Forever's quests, rares and dungeon drops.
+- WoW Forever: gear suggestions (try-on) use Forever's boss loot and quest rewards (ForeverGear.lua) in place of the
+  Classic ones, including Forever's new dungeons and quests.
+- WoW Forever: reagent vendor prices are Forever's (vials, water and spices cost more there; Stormwind Seasoning Herbs
+  aren't sold); the Expert Fishing book seller's spot is exact; two more BiS items show their source.
+- WoW Forever: gear sourced from raids or Classic world drops is hidden until it's confirmed on Forever;
+  /alts classic shows (or hides) it again.
+
 v1.6.8
 - Profession trainers checked against Wowhead's WoW Forever database: every Expert and Artisan trainer is right.
   Three that Wowhead hasn't seen on Forever yet are marked so (Drakk Stonehand, Caryssia Moonhunter, Meilosh).

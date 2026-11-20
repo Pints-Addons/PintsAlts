@@ -187,6 +187,12 @@ end
 ---------------------------------------------------------------- the pane
 local pane, rows = nil, {}
 local view = {}            -- [charKey] = bracket shown (nil = by level)
+-- collapsed gear slots, shared by every character: PintsLedgerDB.bisFolded[slot] = true
+local function Folded()
+  if type(PintsLedgerDB) ~= "table" then return {} end
+  PintsLedgerDB.bisFolded = PintsLedgerDB.bisFolded or {}
+  return PintsLedgerDB.bisFolded
+end
 local atLevel = {}         -- [charKey] = level typed in the level box (nil = the character's own)
 local dungeon = nil        -- the dungeon filter (nil = every source)
 
@@ -257,6 +263,12 @@ local function Row(i)
   r.pct = r:CreateFontString(nil, "OVERLAY", "GameFontNormal"); r.pct:SetPoint("RIGHT", -60, 0); r.pct:SetWidth(80); r.pct:SetJustifyH("RIGHT")
   r.lvl = r:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall"); r.lvl:SetPoint("RIGHT", -6, 0); r.lvl:SetWidth(50); r.lvl:SetJustifyH("RIGHT")
   r:SetScript("OnEnter", function(self)
+    if self.slotKey then
+      GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+      GameTooltip:AddLine("Click: collapse or expand this slot", 0.6, 0.8, 1)
+      GameTooltip:AddLine("Right-click: collapse or expand every slot", 0.6, 0.8, 1)
+      GameTooltip:Show(); return
+    end
     if not self.e then return end
     GameTooltip:SetOwner(self, "ANCHOR_RIGHT"); GameTooltip:SetHyperlink("item:" .. self.e.id)
     GameTooltip:AddLine(" ")
@@ -265,7 +277,17 @@ local function Row(i)
     GameTooltip:Show()
   end)
   r:SetScript("OnLeave", function() GameTooltip:Hide() end)
-  r:SetScript("OnClick", function(self)
+  r:SetScript("OnClick", function(self, button)
+    if self.slotKey then
+      local F = Folded()
+      if button == "RightButton" then
+        local any = false   -- anything open: collapse all; all collapsed: open all
+        for _, sd in ipairs(SLOTS) do if not F[sd[1]] then any = true end end
+        for _, sd in ipairs(SLOTS) do F[sd[1]] = any or nil end
+      else F[self.slotKey] = not F[self.slotKey] or nil end
+      if pane.c then B.Fill(pane.c) end
+      return
+    end
     local e, c = self.e, pane.c
     if not e or not c then return end
     local link = select(2, GetItemInfo(e.id)) or ("item:" .. e.id)
@@ -503,23 +525,27 @@ function B.Fill(c)
       i = i + 1
       local h = Row(i)
       h.e = nil
+      h.slotKey = sd[1]
+      local folded = Folded()[sd[1]]
       h:ClearAllPoints(); h:SetPoint("TOPLEFT", 0, -y); h:SetHeight(HEAD_H)
       h.bg:SetColorTexture(1, 0.82, 0, 0.10)
       h.icon:Hide(); h.star:Hide(); h.rank:SetText(""); h.src:SetText(""); h.pct:SetText(""); h.lvl:SetText("")
       local worn = c.gear and c.gear[sd[2]]
       local wn = worn and GetItemInfo(worn)
       h.name:ClearAllPoints(); h.name:SetPoint("LEFT", 8, 0)
-      h.name:SetText("|cffffd100" .. sd[3] .. "|r")
+      h.name:SetText("|TInterface\\Buttons\\UI-" .. (folded and "Plus" or "Minus") .. "Button-Up:14:14|t |cffffd100" .. sd[3] .. "|r" ..
+        (folded and ("  |cff909090(" .. #ids .. ")|r") or ""))
       h.have:SetText(worn and ("|cff909090wearing:|r " .. (wn or "...")) or "|cff909090(empty)|r")
       h:Show()
       y = y + HEAD_H + 2
-      for _, pair in ipairs(ids) do
+      for _, pair in ipairs(folded and {} or ids) do
         local id, fromCap = pair[1], pair[2]
         local it = D.items[id] or {}
         i = i + 1
         local r = Row(i)
         local src = it[1] and D.sources[it[1]] or ""
         r.e = { id = id, slot = sd[2], src = src }
+        r.slotKey = nil
         r.rank:SetText(pair[3] == 1 and ("|cffffd100" .. pair[3] .. ".|r") or ("|cffc0c0c0" .. pair[3] .. ".|r"))
         r:ClearAllPoints(); r:SetPoint("TOPLEFT", 0, -y); r:SetHeight(ROW_H - 2)
         -- what this character wears now: a light row, so it's easy to find in the list

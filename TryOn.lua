@@ -290,6 +290,11 @@ local function DescribeStatic(src, fac)
     local kind, rest = part:sub(1, 1), part:sub(2)
     local a, b, cc = rest:match("^(%d+):(%d+):?(%d*)$")
     a, b, cc = tonumber(a), tonumber(b), tonumber(cc)
+    -- WoW Forever: raids and world drops aren't confirmed there yet; hidden unless /alts classic
+    if (kind == "R" or kind == "W") and type(issecretvalue) == "function"
+      and not (PintsLedgerDB and PintsLedgerDB.showUnconfirmed) then
+      kind = ""
+    end
     if kind == "D" or kind == "R" then
       out[#out + 1] = { k = kind == "D" and "dungeon" or "raid", text = ("%s - %s |cff808080(%d%%)|r"):format(Str(a), Str(b), cc or 0) }
     elseif kind == "W" then
@@ -324,7 +329,7 @@ local function Gather(c, slot, opts)
   local function check(id, link, lowBound)
     local st = D[id]
     local csub, loc, req, cmask
-    if st then
+    if st and st[1] ~= 0 then          -- (0: a WoW Forever item the data doesn't describe - the game does, below)
       csub, loc, req, cmask = st[2], INV[st[1]], st[3], st[5]
     else
       local _, _, _, _, rl, _, _, _, el, _, _, cid, scid = GetItemInfo(link or id)

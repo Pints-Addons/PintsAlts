@@ -414,10 +414,13 @@ local function ShowTab(key)
     t.text:SetTextColor(k == key and 1 or 1, k == key and 1 or 0.82, k == key and 1 or 0)
   end
   win.ledger:SetShown(key == "ledger")
-  if key == "characters" then
+  -- BiS: the Characters page showing the BiS list (for the character picked on the left)
+  if key == "characters" or key == "bis" then
     if not win.chars.built and NS.BuildCharacters then NS.BuildCharacters(win.chars); win.chars.built = true end
     win.chars:Show()
-    if NS.RefreshCharacters then NS.RefreshCharacters() end
+    if key == "bis" and NS.ShowSub then NS.ShowSub("bis")
+    elseif NS.CurrentSub and NS.CurrentSub() == "bis" and NS.ShowSub then NS.ShowSub("gear")
+    elseif NS.RefreshCharacters then NS.RefreshCharacters() end
   else
     win.chars:Hide()
   end
@@ -499,6 +502,11 @@ end
 local function ItemName(id) local n = GetItemInfo(id); return n or ("item " .. id) end
 -- reagents vendors sell (unlimited stock), price each in copper - from the CMaNGOS Classic database
 local VENDOR = { [159]=5,[1179]=25,[2320]=10,[2321]=100,[2324]=25,[2325]=1000,[2596]=120,[2604]=50,[2605]=100,[2665]=20,[2678]=2,[2692]=40,[2880]=100,[2894]=50,[3371]=4,[3372]=40,[3466]=2000,[3713]=160,[3857]=500,[4289]=50,[4291]=500,[4340]=350,[4341]=500,[4342]=2500,[4399]=200,[4400]=2000,[4470]=38,[4536]=5,[6260]=50,[6261]=1000,[6530]=100,[8343]=2000,[8925]=500,[10290]=2500,[10647]=2000,[10648]=500,[14341]=5000,[17034]=200,[17035]=400,[17194]=2,[17196]=50,[18256]=6000 }
+-- WoW Forever: what vendors charge there (Wowhead's WoW Forever item pages, November 2026) - Forever raised some (vials, water,
+-- spices) and stopped selling others (nil)
+if type(issecretvalue) == "function" then
+	for id, p in pairs({ [159] = 25, [1179] = 125, [2320] = 10, [2321] = 100, [2324] = 25, [2325] = 1000, [2596] = 120, [2604] = 50, [2605] = 100, [2665] = false, [2678] = 10, [2692] = 40, [2880] = 100, [2894] = 50, [3371] = 20, [3372] = 200, [3466] = 2000, [3713] = 168, [3857] = 500, [4289] = 50, [4291] = 500, [4340] = 350, [4341] = 500, [4342] = 2500, [4399] = 200, [4400] = 2000, [4470] = 38, [4536] = 25, [6260] = 50, [6261] = 1000, [6530] = 100, [8343] = 2000, [8925] = 2500, [10290] = 2500, [10647] = 2000, [10648] = 500, [14341] = 5000, [17034] = 200, [17035] = 400, [17194] = 10, [17196] = 50, [18256] = 30000 }) do VENDOR[id] = p or nil end
+end
 -- best price for one: vendor if a vendor sells it, else the auction house; second value says which
 local function UnitCost(id)
   if VENDOR[id] then return VENDOR[id], "vendor" end
@@ -805,7 +813,7 @@ local function CreateWindow()
   searchBox.ph = searchBox:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall"); searchBox.ph:SetPoint("LEFT", 2, 0)
   searchBox.ph:SetText("Search items on all characters...")
   win.search = CreateFrame("Frame", nil, win)
-  win.search:SetPoint("TOPLEFT", 12, -58); win.search:SetPoint("BOTTOMRIGHT", -12, 44); win.search:Hide()
+  win.search:SetPoint("TOPLEFT", 12, -92); win.search:SetPoint("BOTTOMRIGHT", -12, 12); win.search:Hide()
   local sr = win.search
   sr.info = sr:CreateFontString(nil, "OVERLAY", "GameFontNormal"); sr.info:SetPoint("TOPLEFT", 8, -4)
   sr.hint = sr:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall"); sr.hint:SetPoint("TOPRIGHT", -30, -6)
@@ -909,7 +917,7 @@ local function CreateWindow()
 
   -- ledger page
   win.ledger = CreateFrame("Frame", nil, win)
-  win.ledger:SetPoint("TOPLEFT", 12, -58); win.ledger:SetPoint("BOTTOMRIGHT", -12, 44)
+  win.ledger:SetPoint("TOPLEFT", 12, -92); win.ledger:SetPoint("BOTTOMRIGHT", -12, 12)
   win.nav = {}
   for i, key in ipairs(viewOrder) do
     local b = CreateFrame("Button", nil, win.ledger)
@@ -978,20 +986,21 @@ local function CreateWindow()
 
   -- characters page (built by Characters.lua on first use)
   win.chars = CreateFrame("Frame", nil, win)
-  win.chars:SetPoint("TOPLEFT", 12, -58); win.chars:SetPoint("BOTTOMRIGHT", -12, 44); win.chars:Hide()
+  win.chars:SetPoint("TOPLEFT", 12, -92); win.chars:SetPoint("BOTTOMRIGHT", -12, 12); win.chars:Hide()
 
   -- upgrades page (Craft Upgrades docks here)
   win.upgrades = CreateFrame("Frame", nil, win)
-  win.upgrades:SetPoint("TOPLEFT", 12, -58); win.upgrades:SetPoint("BOTTOMRIGHT", -12, 44); win.upgrades:Hide()
+  win.upgrades:SetPoint("TOPLEFT", 12, -92); win.upgrades:SetPoint("BOTTOMRIGHT", -12, 12); win.upgrades:Hide()
   win.upgrades.missing = win.upgrades:CreateFontString(nil, "OVERLAY", "GameFontNormal")
   win.upgrades.missing:SetPoint("CENTER"); win.upgrades.missing:SetText("Pint's Craft Upgrades isn't installed or enabled.")
 
-  -- bottom tabs
+  -- tabs along the top, under the title (BiS only where there are BiS lists: WoW Forever)
   local tabDefs = { { "ledger", "Ledger" }, { "characters", "Characters" }, { "upgrades", "Craft Upgrades" } }
+  if NS.Bis and NS.Bis.Available and NS.Bis.Available() then table.insert(tabDefs, 3, { "bis", "BiS" }) end
   local tx = 16
   for _, td in ipairs(tabDefs) do
     local t = CreateFrame("Button", nil, win, "BackdropTemplate")
-    t:SetSize(150, 30); t:SetPoint("BOTTOMLEFT", tx, 10)
+    t:SetSize(140, 30); t:SetPoint("TOPLEFT", tx, -56)
     t:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", edgeSize = 12,
       insets = { left = 3, right = 3, top = 3, bottom = 3 } })
     t:SetBackdropColor(0.15, 0.12, 0.05, 0.9); t:SetBackdropBorderColor(1, 0.82, 0, 0.7)
@@ -1001,7 +1010,7 @@ local function CreateWindow()
     t.text = t:CreateFontString(nil, "OVERLAY", "GameFontNormal"); t.text:SetPoint("CENTER"); t.text:SetText(td[2])
     t:SetScript("OnClick", function() ShowTab(td[1]) end)
     tabs[td[1]] = t
-    tx = tx + 156
+    tx = tx + 146
   end
 
   win:SetScript("OnShow", function() ShowTab(currentTab or "ledger") end)
@@ -1023,6 +1032,11 @@ SLASH_PINTSLEDGER1 = "/alts"
 SLASH_PINTSLEDGER2 = "/ledger"
 SLASH_PINTSLEDGER3 = "/pl"
 SlashCmdList.PINTSLEDGER = function(msg)
+  if (msg or ""):lower():match("^%s*classic%s*$") then
+    PintsLedgerDB.showUnconfirmed = not PintsLedgerDB.showUnconfirmed
+    print("|cffd4a017Pint's Alts:|r " .. (PintsLedgerDB.showUnconfirmed and "showing raid and world-drop gear not yet confirmed on WoW Forever." or "hiding raid and world-drop gear not yet confirmed on WoW Forever (/alts classic shows it)."))
+    return
+  end
   if (msg or ""):lower():match("^%s*combat%s*$") then
     PintsLedgerDB.ui.keepInCombat = not PintsLedgerDB.ui.keepInCombat
     print("|cffd4a017Pint's Alts:|r " .. (PintsLedgerDB.ui.keepInCombat and "stays open in combat." or "closes when a fight starts."))

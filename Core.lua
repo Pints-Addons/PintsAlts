@@ -178,7 +178,7 @@ local WHERE = {
   -- secondary skills: Expert from a book, Artisan from a quest
   Fishing = {
     Expert = { what = "Book \"Expert Fishing - The Bass and You\"", who = "Old Man Heming", town = "Booty Bay", cost = G,
-               map = 1434, x = 27.4, y = 77.2, approx = true },
+               map = 1434, x = 27.4, y = 77.0 },   -- (Wowhead WoW Forever)
     Artisan = { what = "Quest \"Nat Pagle, Angler Extreme\"", who = "Nat Pagle", town = "Tidefury Cove, Dustwallow Marsh",
                 cont = 1, wx = -4135.3, wy = -4052.0, note = "level 35" } },
   Cooking = {

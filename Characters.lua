@@ -791,6 +791,7 @@ local function ShowSub(key)
 end
 
 NS.ShowSub = function(k) ShowSub(k) end
+NS.CurrentSub = function() return sub end
 -- the character picked here, while the window is open (BiS ranks in item tooltips follow it)
 function NS.SelectedChar() return page and page:IsVisible() and sel or nil end
 function NS.SelectCharacter(realm, name, subKey)
@@ -893,7 +894,9 @@ function NS.RefreshCharacters()
   local hasGB, x = NS.HasGuildBank(sel), 160
   for _, d in ipairs(page.subOrder or {}) do
     local t = page.subTabs[d[1]]
-    if d[1] ~= "guild" or hasGB then t:ClearAllPoints(); t:SetPoint("TOPLEFT", x, 0); t:Show(); x = x + 102 else t:Hide() end
+    if not t then
+      -- (BiS has its own tab at the top of the window now)
+    elseif d[1] ~= "guild" or hasGB then t:ClearAllPoints(); t:SetPoint("TOPLEFT", x, 0); t:Show(); x = x + 102 else t:Hide() end
   end
   if sub == "guild" and not hasGB then
     sub = "bags"
@@ -947,8 +950,7 @@ function NS.BuildCharacters(parent)
                   { "rep", "Reputation" }, { "skills", "Skills" } }
   -- BiS lists (WoW Forever, BisData.lua)
   if NS.Bis and NS.Bis.Available() then
-    panes.bis = NS.Bis.Build(area)
-    table.insert(defs, 2, { "bis", "BiS" })
+    panes.bis = NS.Bis.Build(area)       -- (its tab is at the top of the window: Pint's Alts' own BiS tab)
   end
   for i, d in ipairs(defs) do
     local t = CreateFrame("Button", nil, page, "BackdropTemplate")
