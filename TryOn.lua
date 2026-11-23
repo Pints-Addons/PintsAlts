@@ -338,6 +338,9 @@ local function Gather(c, slot, opts)
     end
     if req > hi or (lowBound and req < lo) then return false end
     if cmask and cmask ~= 0 and bit and bit.band and CLASS_BIT[c.classFile or ""] and bit.band(cmask, CLASS_BIT[c.classFile]) == 0 then return false end
+    -- (no class list in the data - a WoW Forever item: the item's own "Classes:" line)
+    local CS = _G.CraftUpgradesScore
+    if (not cmask or cmask == 0) and CS and CS.ClassOK and c.classFile and not CS.ClassOK(link or id, c.classFile) then return false end
     return Usable(c, csub, loc, slot, hi)
   end
   local pending = 0

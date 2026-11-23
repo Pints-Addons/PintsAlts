@@ -398,6 +398,9 @@ function ScanBank()
       C_Timer.After(1, function() pcall(ScanBank); if L.OnChanged then L.OnChanged() end end)
       return
     end
+    -- still all empty after that: the game isn't giving the bank (away from the banker, or the tabs never arrived) -
+    -- keep the bank you'd saved rather than wiping it
+    if owned > 0 or had then bankTries = 0; return end
   end
   bankTries = 0
   rec.bank, rec.bankSlots, rec.items = bank, bankSlots, rec.items or {}

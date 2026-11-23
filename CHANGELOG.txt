@@ -1,5 +1,11 @@
 Pint's Alts - Changelog
 
+v1.6.11
+- BiS and Try On: gear made for other classes only ("Classes: Priest") is left off a character's lists, WoW Forever's
+  items too (read from the item itself when the data has no class list). Needs Pint's Craft Upgrades.
+- WoW Forever: your saved bank isn't wiped any more when the game reports the bank tabs as empty (away from the
+  banker) - the bank you saved is kept until you're at the banker again.
+
 v1.6.10
 - A character no longer shows up twice - once under its realm and once under a blank one - when the game hasn't
   named the realm yet at login (seen on WoW Forever). Characters already filed under the blank realm move back to their

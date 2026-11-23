@@ -519,7 +519,9 @@ function B.Fill(c)
     local ids = {}
     for rank, pair in ipairs(list[sd[1]] or {}) do
       local it = D.items[pair[1]]
-      if not dungeon or FromDungeon(it and it[1] and D.sources[it[1]], dungeon) then ids[#ids + 1] = { pair[1], pair[2], rank } end
+      -- (gear made for other classes only - "Classes: Priest" - never goes on this character's list)
+      local classOK = not (S and S.ClassOK and c.classFile) or S.ClassOK(pair[1], c.classFile)
+      if classOK and (not dungeon or FromDungeon(it and it[1] and D.sources[it[1]], dungeon)) then ids[#ids + 1] = { pair[1], pair[2], rank } end
     end
     if #ids > 0 then
       i = i + 1
