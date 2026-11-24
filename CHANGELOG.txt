@@ -1,5 +1,12 @@
 Pint's Alts - Changelog
 
+v1.6.12
+- Hunters can't use thrown weapons (warriors and rogues only): thrown weapons are no longer suggested or counted as
+  usable for hunters.
+- WoW Forever: when the game keeps the realm's name hidden (it can for a whole session), a character is saved under
+  the realm it was saved under before - not "?" - so its bags, bank and counts show up for your other characters and
+  in item tooltips. Characters filed under "?" move back (the newer record wins).
+
 v1.6.11
 - BiS and Try On: gear made for other classes only ("Classes: Priest") is left off a character's lists, WoW Forever's
   items too (read from the item itself when the data has no class list). Needs Pint's Craft Upgrades.

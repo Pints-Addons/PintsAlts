@@ -710,7 +710,19 @@ ev:SetScript("OnEvent", function(_, event, arg1, arg2)
     realm = GetRealmName()
     if not Ok(realm) and GetNormalizedRealmName then realm = GetNormalizedRealmName() end
     if not Ok(realm) then realm = PintsLedgerDB.lastRealm end
-    if Ok(realm) then
+    -- still nothing (WoW Forever can keep the realm hidden all session): the realm this character was saved under
+    -- before, or else the one most of your characters are on
+    if not Ok(realm) then
+      local most = 0
+      for r, list in pairs(PintsLedgerDB.chars) do
+        if Ok(r) and r ~= "?" and type(list) == "table" then
+          if list[name] then realm = r; break end
+          local n = 0; for _ in pairs(list) do n = n + 1 end
+          if n > most then most = n; realm = r end
+        end
+      end
+    end
+    if Ok(realm) and realm ~= "?" then
       PintsLedgerDB.lastRealm = realm
       -- characters already filed under a blank realm go back to their realm (the newer record wins)
       for _, bad in ipairs({ "", "?" }) do
