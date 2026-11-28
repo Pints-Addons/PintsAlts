@@ -1,5 +1,9 @@
 Pint's Alts - Changelog
 
+v1.6.14
+- WoW Forever: the Skills tab lists the weapon skills each character knows (the game no longer puts them in the
+  skill list, so they're read from the weapon spells), and "Still to learn" leaves those out.
+
 v1.6.13
 - Hunters can use thrown weapons after all (a hunter trained Thrown in game): they're suggested and counted as
   usable for hunters again, as before the last version.

@@ -5,6 +5,7 @@ local ADDON, NS = ...
 local GetItemInfo = GetItemInfo or (C_Item and C_Item.GetItemInfo)
 local GetDetailedItemLevelInfo = GetDetailedItemLevelInfo or (C_Item and C_Item.GetDetailedItemLevelInfo)
 local GetNumSkillLines, GetSkillLineInfo = GetNumSkillLines, GetSkillLineInfo
+local NO_SKILL_LIST = not GetNumSkillLines   -- (WoW Forever: the skill list only has professions - weapons are added below)
 if not GetNumSkillLines and GetProfessions then
 	local lines = {}
 	GetNumSkillLines = function()
@@ -312,6 +313,22 @@ local function ScanSkills()
     if not isHeader and L.PROF_ICON[skillName] then
       local t = { name = skillName, rank = rank, max = maxRank }
       if SECONDARY[skillName] then sec[skillName] = t else profs[#profs + 1] = t end
+    end
+  end
+  -- WoW Forever: weapon skills aren't in the skill list; whether you know each one comes from its spell
+  if NO_SKILL_LIST then
+    local known = (IsPlayerSpell and function(id) return IsPlayerSpell(id) end) or IsSpellKnown
+    local WEAPONS = { { "Axes", 196 }, { "Two-Handed Axes", 197 }, { "Maces", 198 }, { "Two-Handed Maces", 199 },
+      { "Polearms", 200 }, { "Swords", 201 }, { "Two-Handed Swords", 202 }, { "Staves", 227 }, { "Bows", 264 },
+      { "Guns", 266 }, { "Daggers", 1180 }, { "Thrown", 2567 }, { "Wands", 5009 }, { "Crossbows", 5011 }, { "Fist Weapons", 15590 } }
+    local got = {}
+    for _, w in ipairs(WEAPONS) do
+      local ok, k = pcall(known, w[2])
+      if ok and k and not (issecretvalue and issecretvalue(k)) then got[#got + 1] = { w[1], 0, 0, 0 } end
+    end
+    if known and #got > 0 then
+      all[#all + 1] = { "Weapon Skills", 1, 0, 0 }
+      for _, g in ipairs(got) do all[#all + 1] = g end
     end
   end
   rec.profs, rec.secondary, rec.skillList = profs, sec, all
@@ -760,7 +777,7 @@ ev:SetScript("OnEvent", function(_, event, arg1, arg2)
       "BAG_UPDATE_DELAYED", "BANKFRAME_OPENED", "PLAYERBANKSLOTS_CHANGED", "PLAYERBANKBAGSLOTS_CHANGED", "MAIL_INBOX_UPDATE",
       "AUCTION_OWNED_LIST_UPDATE", "AUCTION_BIDDER_LIST_UPDATE", "AUCTION_HOUSE_SHOW", "TRADE_SKILL_SHOW", "TRADE_SKILL_UPDATE", "CRAFT_SHOW", "CRAFT_UPDATE",
       "TIME_PLAYED_MSG", "PLAYER_LOGOUT", "ZONE_CHANGED_NEW_AREA", "UPDATE_FACTION", "UNIT_INVENTORY_CHANGED", "TRADE_SKILL_LIST_UPDATE", "CURRENCY_DISPLAY_UPDATE",
-      "PLAYER_SPECIALIZATION_CHANGED", "ACTIVE_TALENT_GROUP_CHANGED" }) do
+      "PLAYER_SPECIALIZATION_CHANGED", "ACTIVE_TALENT_GROUP_CHANGED", "LEARNED_SPELL_IN_TAB", "SPELLS_CHANGED" }) do
       pcall(ev.RegisterEvent, ev, e)   -- events this game version lacks are skipped
     end
     if GetNumGuildBankTabs then
@@ -795,7 +812,7 @@ ev:SetScript("OnEvent", function(_, event, arg1, arg2)
     Soon("reps", ScanReps, 1)
   elseif event == "UNIT_INVENTORY_CHANGED" then
     if arg1 == "player" then Soon("gear", ScanGear, 1.5) end
-  elseif event == "SKILL_LINES_CHANGED" then
+  elseif event == "SKILL_LINES_CHANGED" or event == "LEARNED_SPELL_IN_TAB" or event == "SPELLS_CHANGED" then
     Soon("skills", ScanSkills)
   elseif event == "CHARACTER_POINTS_CHANGED" or event == "PLAYER_SPECIALIZATION_CHANGED" or event == "ACTIVE_TALENT_GROUP_CHANGED" then
     Soon("talents", ScanTalents)
